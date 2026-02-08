@@ -1,0 +1,3 @@
+[2026-02-08T12:50:37.511Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Zadeghi","Email":"mahan.zadeghi@tevapharma.ch","Department":"IT","StartDate":"2026-01-05"}
+[2026-02-08T12:50:37.530Z] Generated slug: mahan-zadeghi
+[2026-02-08T12:50:37.542Z] Employee created successfully: 41627148-fb93-4722-b76d-f16d5bad1a9e

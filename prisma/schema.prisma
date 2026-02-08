@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Asset {
+  AssetID      String   @id @default(uuid())
+  AssetType    String
+  AssetName    String
+  Brand        String
+  Model        String
+  SerialNumber String   @unique
+  DeviceTag    String?
+  Status       String   // Available, Assigned, Returned, Lost, Damaged
+  PurchaseDate DateTime
+  Notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignments  Assignment[]
+}
+
+model Employee {
+  EmployeeID String   @id @default(uuid())
+  FirstName  String
+  LastName   String
+  Email      String   @unique
+  Slug       String?  @unique
+  Department String
+  StartDate  DateTime
+  EndDate    DateTime?
+  Status     String   @default("Active") // Active, Leaving, Left
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  assignments Assignment[]
+}
+
+model Assignment {
+  AssignmentID       String    @id @default(uuid())
+  AssetID            String
+  EmployeeID         String
+  AssignedDate       DateTime  @default(now())
+  ExpectedReturnDate DateTime?
+  ActualReturnDate   DateTime?
+  Status             String    // Active, Returned
+  Notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  Asset    Asset    @relation(fields: [AssetID], references: [AssetID])
+  Employee Employee @relation(fields: [EmployeeID], references: [EmployeeID])
+}
+
+model User {
+  UserID    String   @id @default(uuid())
+  Username  String   @unique
+  Password  String   // Hashed
+  Role      String   @default("USER") // ADMIN, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AssetType {
+  TypeID    String   @id @default(uuid())
+  Name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

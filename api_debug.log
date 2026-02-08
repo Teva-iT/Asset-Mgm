@@ -1,0 +1,140 @@
+[2026-02-08T11:26:44.890Z] API /api/asset-types called
+[2026-02-08T11:26:44.894Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:26:44.894Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:26:45.082Z] API /api/asset-types called
+[2026-02-08T11:26:45.084Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:26:45.086Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:26:56.750Z] API /api/asset-types called
+[2026-02-08T11:26:56.751Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:26:56.751Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:26:56.824Z] API /api/asset-types called
+[2026-02-08T11:26:56.824Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:26:56.825Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:28:04.231Z] API /api/asset-types called
+[2026-02-08T11:28:04.231Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:28:04.232Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:28:04.332Z] API /api/asset-types called
+[2026-02-08T11:28:04.333Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:28:04.336Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:28:12.148Z] API /api/asset-types called
+[2026-02-08T11:28:12.148Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:28:12.149Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:28:12.183Z] API /api/asset-types called
+[2026-02-08T11:28:12.184Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:28:12.185Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:12.025Z] API /api/asset-types called
+[2026-02-08T11:49:12.026Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:12.026Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:12.079Z] API /api/asset-types called
+[2026-02-08T11:49:12.079Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:12.080Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:16.501Z] API /api/asset-types called
+[2026-02-08T11:49:16.502Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:16.502Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:16.522Z] API /api/asset-types called
+[2026-02-08T11:49:16.523Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:16.523Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:18.793Z] API /api/asset-types called
+[2026-02-08T11:49:18.793Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:18.795Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:49:18.824Z] API /api/asset-types called
+[2026-02-08T11:49:18.825Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:49:18.826Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:19.291Z] API /api/asset-types called
+[2026-02-08T11:57:19.292Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:19.292Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:19.329Z] API /api/asset-types called
+[2026-02-08T11:57:19.330Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:19.331Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:24.034Z] API /api/asset-types called
+[2026-02-08T11:57:24.035Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:24.036Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:24.084Z] API /api/asset-types called
+[2026-02-08T11:57:24.085Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:24.086Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:26.407Z] API /api/asset-types called
+[2026-02-08T11:57:26.407Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:26.407Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:26.429Z] API /api/asset-types called
+[2026-02-08T11:57:26.430Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:26.431Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:28.084Z] API /api/asset-types called
+[2026-02-08T11:57:28.085Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:28.085Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:57:28.115Z] API /api/asset-types called
+[2026-02-08T11:57:28.116Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:57:28.117Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T11:59:39.234Z] API /api/asset-types called
+[2026-02-08T11:59:39.235Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T11:59:39.236Z] ERROR: Cannot read properties of undefined (reading 'findMany')
+[2026-02-08T12:13:54.289Z] API /api/asset-types called
+[2026-02-08T12:13:54.291Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:13:54.604Z] ERROR: 
+Invalid `prisma.assetType.findMany()` invocation:
+
+
+The table `public.AssetType` does not exist in the current database.
+[2026-02-08T12:14:19.778Z] API /api/asset-types called
+[2026-02-08T12:14:19.780Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:14:19.800Z] ERROR: 
+Invalid `prisma.assetType.findMany()` invocation:
+
+
+The table `public.AssetType` does not exist in the current database.
+[2026-02-08T12:14:19.887Z] API /api/asset-types called
+[2026-02-08T12:14:19.888Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:14:19.897Z] ERROR: 
+Invalid `prisma.assetType.findMany()` invocation:
+
+
+The table `public.AssetType` does not exist in the current database.
+[2026-02-08T12:18:18.709Z] API /api/asset-types called
+[2026-02-08T12:18:18.710Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:18.714Z] ERROR: 
+Invalid `prisma.assetType.findMany()` invocation:
+
+
+The table `public.AssetType` does not exist in the current database.
+[2026-02-08T12:18:18.739Z] API /api/asset-types called
+[2026-02-08T12:18:18.740Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:18.744Z] ERROR: 
+Invalid `prisma.assetType.findMany()` invocation:
+
+
+The table `public.AssetType` does not exist in the current database.
+[2026-02-08T12:18:40.405Z] API /api/asset-types called
+[2026-02-08T12:18:40.405Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:40.414Z] Fetched 25 types.
+[2026-02-08T12:18:40.923Z] API /api/asset-types called
+[2026-02-08T12:18:40.924Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:40.925Z] Fetched 25 types.
+[2026-02-08T12:18:40.943Z] API /api/asset-types called
+[2026-02-08T12:18:40.944Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:40.946Z] Fetched 25 types.
+[2026-02-08T12:18:41.875Z] API /api/asset-types called
+[2026-02-08T12:18:41.875Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:41.877Z] Fetched 25 types.
+[2026-02-08T12:18:41.898Z] API /api/asset-types called
+[2026-02-08T12:18:41.898Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:18:41.900Z] Fetched 25 types.
+[2026-02-08T12:23:48.710Z] API /api/asset-types called
+[2026-02-08T12:23:48.711Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:23:48.777Z] Fetched 25 types.
+[2026-02-08T12:24:21.965Z] API /api/asset-types called
+[2026-02-08T12:24:21.965Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:24:21.968Z] Fetched 25 types.
+[2026-02-08T12:24:21.996Z] API /api/asset-types called
+[2026-02-08T12:24:21.997Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:24:22.000Z] Fetched 25 types.
+[2026-02-08T12:24:23.444Z] API /api/asset-types called
+[2026-02-08T12:24:23.444Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:24:23.448Z] Fetched 25 types.
+[2026-02-08T12:24:23.499Z] API /api/asset-types called
+[2026-02-08T12:24:23.500Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:24:23.504Z] Fetched 25 types.
+[2026-02-08T12:26:14.830Z] API /api/asset-types called
+[2026-02-08T12:26:14.832Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:26:14.838Z] Fetched 25 types.
+[2026-02-08T12:26:14.877Z] API /api/asset-types called
+[2026-02-08T12:26:14.878Z] Attempting to fetch AssetTypes from DB...
+[2026-02-08T12:26:14.881Z] Fetched 25 types.
