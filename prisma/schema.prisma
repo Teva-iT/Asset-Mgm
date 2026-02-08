@@ -8,16 +8,34 @@ datasource db {
 }
 
 
+model ScanHistory {
+  ScanID    String   @id @default(uuid())
+  ScannedAt DateTime @default(now())
+  Outcome   String // Found, Not Found, Error
+  Method    String // Scanner, Manual
+  Query     String? // What was actually scanned
+
+  // Relations
+  CalculatedStatus String? // Snapshot of status at time of scan
+  AssetID          String?
+  Asset            Asset?   @relation(fields: [AssetID], references: [AssetID])
+
+  ScannedByUserID String?
+  ScannedBy       User?   @relation(fields: [ScannedByUserID], references: [UserID])
+}
+
 model Asset {
   AssetID      String   @id @default(uuid())
-  AssetType    String
-  AssetName    String
-  Brand        String
-  Model        String
-  SerialNumber String   @unique
+  AssetType    String?
+  AssetName    String?
+  Brand        String?
+  Model        String?
+  SerialNumber String?   @unique
   DeviceTag    String?
-  Status       String   // Available, Assigned, Returned, Lost, Damaged
-  PurchaseDate DateTime
+  Status       String?   // Available, Assigned, Returned, Lost, Damaged
+  Condition    String?   // New (Unboxed), Used (Good), Used (Needs Check), Damaged
+  OperationalState String? // Not Imaged, Imaged (Ready), In Preparation, Retired
+  PurchaseDate DateTime?
   Notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -50,20 +68,24 @@ model Assignment {
   ActualReturnDate   DateTime?
   Status             String    // Active, Returned
   Notes              String?
+  AssignedByUserID   String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   Asset    Asset    @relation(fields: [AssetID], references: [AssetID])
   Employee Employee @relation(fields: [EmployeeID], references: [EmployeeID])
+  AssignedBy User?  @relation(fields: [AssignedByUserID], references: [UserID])
 }
 
 model User {
-  UserID    String   @id @default(uuid())
-  Username  String   @unique
-  Password  String   // Hashed
-  Role      String   @default("USER") // ADMIN, USER
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  UserID       String         @id @default(uuid())
+  Username     String         @unique
+  Password     String
+  Role         String         @default("VIEWER") // ADMIN, VIEWER
+  CreatedAt    DateTime       @default(now())
+  UpdatedAt    DateTime       @updatedAt
+  AssignedAssets Assignment[] @relation("AssignedBy")
+  ScannedHistory ScanHistory[]
 }
 
 model AssetType {
@@ -71,4 +93,24 @@ model AssetType {
   Name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Department {
+  DepartmentID String   @id @default(uuid())
+  Name         String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AssetRequest {
+  RequestID     String   @id @default(uuid())
+  FirstName     String
+  LastName      String
+  Email         String
+  RequestType   String // Return, Delivery, Exchange
+  RequestedDate DateTime
+  Notes         String?
+  Status        String   @default("Pending") // Pending, Approved, Completed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

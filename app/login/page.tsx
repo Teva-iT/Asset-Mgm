@@ -43,7 +43,10 @@ export default function LoginPage() {
             minHeight: '100vh',
             background: '#f5f5f5'
         }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+            <div className="card" style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ height: '60px', marginBottom: '1.5rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <img src="/logo.JPG" alt="Logo" style={{ height: '100%', objectFit: 'contain' }} />
+                </div>
                 <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Login</h1>
                 <form onSubmit={handleLogin}>
                     <div className="form-group">

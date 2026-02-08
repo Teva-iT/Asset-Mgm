@@ -18,13 +18,16 @@ export async function GET(request: Request) {
     const q = searchParams.get('q')
 
     try {
-        const where = q ? {
-            OR: [
-                { FirstName: { contains: q, mode: 'insensitive' as const } },
-                { LastName: { contains: q, mode: 'insensitive' as const } },
-                { Email: { contains: q, mode: 'insensitive' as const } },
-                { Department: { contains: q, mode: 'insensitive' as const } },
-            ]
+        const terms = q ? q.split(/\s+/).filter(Boolean) : []
+        const where = terms.length > 0 ? {
+            AND: terms.map(term => ({
+                OR: [
+                    { FirstName: { contains: term, mode: 'insensitive' as const } },
+                    { LastName: { contains: term, mode: 'insensitive' as const } },
+                    { Email: { contains: term, mode: 'insensitive' as const } },
+                    { Department: { contains: term, mode: 'insensitive' as const } },
+                ]
+            }))
         } : {}
 
         const employees = await prisma.employee.findMany({
@@ -42,6 +45,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 })
     }
 }
+
 
 export async function POST(request: Request) {
     try {

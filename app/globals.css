@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
     --primary: #0070f3;
     --bg: #ffffff;
@@ -51,39 +55,55 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
+/* Enterprise Button UI */
 .btn {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background-color: #ffffff;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-    font-size: 0.95rem;
+    transition: all 0.15s ease;
+    line-height: 1;
     text-decoration: none;
-    color: inherit;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
+    /* Ensure links look like buttons */
 }
 
 .btn-outline {
-    border: 1px solid var(--border);
-    background: transparent;
+    border-color: #e5e7eb;
+    color: #374151;
+    background-color: #ffffff;
 }
 
 .btn-outline:hover {
-    border-color: var(--text);
-    background: var(--border);
+    background-color: #f9fafb;
+}
+
+/* Delete = Variant Danger */
+.btn-danger {
+    border-color: #fca5a5;
+    color: #dc2626;
+    background-color: #ffffff;
+}
+
+.btn-danger:hover {
+    background-color: #fff1f2;
+}
+
+/* View / Edit = Variant Primary */
+.btn-primary {
+    border-color: #93c5fd;
+    color: #2563eb;
+    background-color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #eff6ff;
 }
 
 .form-grid {
@@ -276,6 +296,44 @@ body {
     background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
 }
 
-.action-btn.bg-gray-600:hover {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+
+/* Enterprise Filter UI */
+.filter-control {
+    height: 42px;
+    padding: 0 12px;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    transition: all 0.2s ease-in-out;
+}
+
+.filter-control:hover {
+    border-color: #9ca3af;
+}
+
+.filter-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+}
+
+select.filter-control {
+    /* appearance: none; */
+    /* Keeping default arrow for now as user didn't explicitly demand custom arrow for native selects, just consistent box model */
+    /* However, to match height perfectly with flex items, native select might need line-height adjustment */
+}
+
+.filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: block;
 }

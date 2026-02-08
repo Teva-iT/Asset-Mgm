@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import DepartmentSelect from './DepartmentSelect'
 
 export default function EmployeeForm({ employee }: { employee?: any }) {
     const router = useRouter()
@@ -14,6 +15,25 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
     // Status Options
     const STATUS_OPTIONS = ['Active', 'Leaving', 'Left']
 
+    // Department Fetching
+    const [departments, setDepartments] = useState<{ DepartmentID: string, Name: string }[]>([])
+    const [selectedDepartment, setSelectedDepartment] = useState(employee?.Department || '')
+
+    useEffect(() => {
+        async function fetchDepartments() {
+            try {
+                const res = await fetch('/api/departments')
+                if (res.ok) {
+                    const data = await res.json()
+                    setDepartments(data)
+                }
+            } catch (err) {
+                console.error('Failed to fetch departments', err)
+            }
+        }
+        fetchDepartments()
+    }, [])
+
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setLoading(true)
@@ -23,10 +43,9 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
         const data: any = Object.fromEntries(formData)
 
         // Add controlled state to data
-        if (employee) {
-            data.Status = status
-            data.EndDate = endDate || null
-        }
+        data.Status = employee ? status : 'Active'
+        data.EndDate = employee ? (endDate || null) : null
+        data.Department = selectedDepartment
 
         try {
             const url = employee ? `/api/employees/${employee.EmployeeID}` : '/api/employees'
@@ -40,7 +59,7 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}))
-                throw new Error(errorData.error || 'Failed to save employee')
+                throw new Error(errorData.error || errorData.message || 'Failed to save employee')
             }
 
             if (employee) {
@@ -80,7 +99,22 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Department</label>
-                        <input name="Department" required className="input-field" placeholder="IT, HR, Sales..." defaultValue={employee?.Department} />
+                        {/* Replaced native select with Rich DepartmentSelect */}
+                        <DepartmentSelect
+                            value={selectedDepartment}
+                            onChange={setSelectedDepartment}
+                            departments={departments}
+                            placeholder="Select Department"
+                            className="w-full"
+                        />
+                        {/* Hidden input to ensure required validation if needed, though handle submit checks state */}
+                        <input
+                            name="DepartmentHidden"
+                            value={selectedDepartment}
+                            onChange={() => { }}
+                            required
+                            style={{ opacity: 0, height: 0, position: 'absolute' }}
+                        />
                     </div>
                     <div className="form-group">
                         <label className="form-label">Start Date</label>

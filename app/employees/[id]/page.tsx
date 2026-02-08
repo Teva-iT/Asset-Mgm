@@ -251,7 +251,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
                                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                                     fontSize: '0.75rem', fontWeight: 700
                                                                 }}>
-                                                                    {assignment.Asset.AssetName.substring(0, 2).toUpperCase()}
+                                                                    {(assignment.Asset.AssetName || 'Unknown').substring(0, 2).toUpperCase()}
                                                                 </div>
                                                                 <div>
                                                                     <div style={{ fontWeight: 600, color: '#111827' }}>{assignment.Asset.AssetName}</div>

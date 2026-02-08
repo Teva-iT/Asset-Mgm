@@ -16,7 +16,8 @@ export async function middleware(request: NextRequest) {
 
     if (!token) {
         if (path.startsWith('/api')) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+            console.log(`Middleware: Unauthorized access to API ${path} (No Token)`)
+            return NextResponse.json({ message: 'Unauthorized: No Token' }, { status: 401 })
         }
         return NextResponse.redirect(new URL('/login', request.url))
     }
@@ -25,9 +26,11 @@ export async function middleware(request: NextRequest) {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret')
         await jwtVerify(token, secret)
         return NextResponse.next()
-    } catch (err) {
+    } catch (err: unknown) {
         if (path.startsWith('/api')) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            console.log(`Middleware: Unauthorized access to API ${path} (Invalid Token: ${errorMessage})`)
+            return NextResponse.json({ message: `Unauthorized: Invalid Token (${errorMessage})` }, { status: 401 })
         }
         return NextResponse.redirect(new URL('/login', request.url))
     }
