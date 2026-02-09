@@ -1,3 +1,12 @@
 [2026-02-08T12:50:37.511Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Zadeghi","Email":"mahan.zadeghi@tevapharma.ch","Department":"IT","StartDate":"2026-01-05"}
 [2026-02-08T12:50:37.530Z] Generated slug: mahan-zadeghi
 [2026-02-08T12:50:37.542Z] Employee created successfully: 41627148-fb93-4722-b76d-f16d5bad1a9e
+[2026-02-08T13:13:20.785Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Zadeghi","Email":"mahan.zadeghi@tevapharma.ch","Department":"IT","StartDate":"2026-01-05","Status":"Active","EndDate":null}
+[2026-02-08T13:13:20.791Z] Generated slug: mahan-zadeghi
+[2026-02-08T13:13:20.799Z] Employee created successfully: 9357a444-8a52-47d5-a3b4-081682f4c7fc
+[2026-02-08T14:08:07.754Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Mahani","Email":"mahan.mahani@gmail.com","Department":"IT","StartDate":"2026-02-02","Status":"Active","EndDate":null}
+[2026-02-08T14:08:07.759Z] Generated slug: mahan-mahani
+[2026-02-08T14:08:07.765Z] Employee created successfully: 88a15594-0e9e-4c16-a6c5-c05d2036e29f
+[2026-02-08T15:50:38.973Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Zadeghi","Email":"mahan.zadeghi@tevapharma.ch","Department":"IT","StartDate":"2026-01-05","Status":"Active","EndDate":null}
+[2026-02-08T15:50:38.976Z] Generated slug: mahan-zadeghi
+[2026-02-08T15:50:38.988Z] Employee created successfully: 86408f38-2b91-4ab9-9026-bbe725390ac9

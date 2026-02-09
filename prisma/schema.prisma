@@ -27,12 +27,15 @@ model ScanHistory {
 model Asset {
   AssetID      String   @id @default(uuid())
   AssetType    String?
+  OwnershipType String? // Individual, Shared, Stock
+  Quantity     Int?     @default(1)
+  Location     String?  // For shared assets
   AssetName    String?
   Brand        String?
   Model        String?
-  SerialNumber String?   @unique
+  SerialNumber String?
   DeviceTag    String?
-  Status       String?   // Available, Assigned, Returned, Lost, Damaged
+  Status       String?   // Available, Assigned, Returned, Lost, Damaged, In Stock
   Condition    String?   // New (Unboxed), Used (Good), Used (Needs Check), Damaged
   OperationalState String? // Not Imaged, Imaged (Ready), In Preparation, Retired
   PurchaseDate DateTime?
@@ -41,6 +44,19 @@ model Asset {
   updatedAt    DateTime @updatedAt
 
   assignments  Assignment[]
+  ScanHistory  ScanHistory[]
+  Photos       AssetPhoto[]
+}
+
+model AssetPhoto {
+  PhotoID     String   @id @default(uuid())
+  AssetID     String
+  URL         String
+  Category    String   @default("General") // General, Barcode, Serial, Location
+  UploadedBy  String?  // UserID or Name
+  createdAt   DateTime @default(now())
+
+  Asset       Asset    @relation(fields: [AssetID], references: [AssetID])
 }
 
 model Employee {
@@ -74,7 +90,7 @@ model Assignment {
 
   Asset    Asset    @relation(fields: [AssetID], references: [AssetID])
   Employee Employee @relation(fields: [EmployeeID], references: [EmployeeID])
-  AssignedBy User?  @relation(fields: [AssignedByUserID], references: [UserID])
+  AssignedBy User?  @relation("AssignedBy", fields: [AssignedByUserID], references: [UserID])
 }
 
 model User {
@@ -89,10 +105,11 @@ model User {
 }
 
 model AssetType {
-  TypeID    String   @id @default(uuid())
-  Name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  TypeID        String   @id @default(uuid())
+  Name          String   @unique
+  OwnershipType String   @default("Individual") // Individual, Shared, Stock
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Department {

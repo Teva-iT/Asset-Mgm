@@ -17,6 +17,8 @@ export default function NavBar() {
         { name: 'Reports', href: '/reports' },
     ]
 
+    if (pathname === '/login') return null
+
     return (
         <div className="flex items-center gap-6">
             {links.map(link => {

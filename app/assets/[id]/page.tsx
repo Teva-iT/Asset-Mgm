@@ -14,7 +14,8 @@ export default async function EditAssetPage({ params }: { params: { id: string }
                     Employee: true,
                     AssignedBy: true
                 }
-            }
+            },
+            Photos: true
         }
     })
 

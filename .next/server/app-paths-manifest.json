@@ -1,9 +1,0 @@
-{
-  "/assets/new/page": "app/assets/new/page.js",
-  "/employees/page": "app/employees/page.js",
-  "/employees/new/page": "app/employees/new/page.js",
-  "/employees/[id]/page": "app/employees/[id]/page.js",
-  "/employees/[id]/edit/page": "app/employees/[id]/edit/page.js",
-  "/api/employees/[id]/route": "app/api/employees/[id]/route.js",
-  "/api/employees/route": "app/api/employees/route.js"
-}

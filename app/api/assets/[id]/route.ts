@@ -8,6 +8,7 @@ export async function GET(
     try {
         const asset = await prisma.asset.findUnique({
             where: { AssetID: params.id },
+            include: { Photos: true, assignments: true } // Include assignments too while we are at it
         })
         if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
         return NextResponse.json(asset)
@@ -38,6 +39,13 @@ export async function PUT(
                     Status: body.Status,
                     PurchaseDate: body.PurchaseDate ? new Date(body.PurchaseDate) : null,
                     Notes: body.Notes,
+                    Photos: body.newPhotos ? {
+                        create: body.newPhotos.map((p: any) => ({
+                            URL: p.url,
+                            Category: p.category || 'General',
+                            UploadedBy: null
+                        }))
+                    } : undefined
                 },
             })
 

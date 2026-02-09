@@ -10,10 +10,11 @@ export async function GET() {
                 UserID: true,
                 Username: true,
                 Role: true,
-                createdAt: true,
+                CreatedAt: true,
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { CreatedAt: 'desc' }
         })
+        console.log('GET /api/users found:', users.length, 'users')
         return NextResponse.json(users)
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })

@@ -64,24 +64,51 @@ export async function POST(request: NextRequest) {
             assignedByUserId = body.assignment.assignedByUserId
         }
 
+        // Ownership Logic
+        const ownershipType = body.OwnershipType || 'Individual'
+        const isStock = ownershipType === 'Stock'
+        const isShared = ownershipType === 'Shared'
+
+        // Status Logic
+        let status = body.Status || 'Available'
+        if (body.assignment && !isStock && !isShared) {
+            status = 'Assigned'
+        } else if (isStock) {
+            // Stock items generally 'In Stock' or 'Available'
+            // User request: "Used / New / In Stock" -> "In Stock" seems appropriate for status if quantity > 0
+            if (!status || status === 'Available') status = 'In Stock'
+        }
+
         const asset = await prisma.$transaction(async (tx) => {
             // 1. Create Asset
             const newAsset = await tx.asset.create({
                 data: {
                     AssetType: body.AssetType || null,
+                    OwnershipType: ownershipType,
+                    Quantity: isStock ? (body.Quantity || 1) : 1,
+                    Location: isShared ? body.Location : null,
                     AssetName: body.AssetName || null,
                     Brand: body.Brand || null,
                     Model: body.Model || null,
-                    SerialNumber: body.SerialNumber || null, // Handle unique constraint for empty strings
+                    SerialNumber: body.SerialNumber || null,
                     DeviceTag: body.DeviceTag || null,
-                    Status: body.assignment ? 'Assigned' : (body.Status || 'Available'),
+                    Status: status,
+                    Condition: body.Condition || null,
+                    OperationalState: body.OperationalState || null,
                     PurchaseDate: body.PurchaseDate ? new Date(body.PurchaseDate) : null,
                     Notes: body.Notes || null,
+                    Photos: {
+                        create: body.photos?.map((p: any) => ({
+                            URL: p.url,
+                            Category: p.category || 'General',
+                            UploadedBy: body.assignment?.assignedBy || null // or use session user
+                        }))
+                    }
                 },
             })
 
-            // 2. Create Assignment (if provided)
-            if (body.assignment) {
+            // 2. Create Assignment (Only for Individual Assets)
+            if (body.assignment && !isStock && !isShared) {
                 await tx.assignment.create({
                     data: {
                         AssetID: newAsset.AssetID,
@@ -89,7 +116,7 @@ export async function POST(request: NextRequest) {
                         AssignedDate: new Date(body.assignment.assignedDate || new Date()),
                         ExpectedReturnDate: body.assignment.expectedReturnDate ? new Date(body.assignment.expectedReturnDate) : null,
                         Status: 'Active',
-                        AssignedByUserID: assignedByUserId, // Validated Audit Field
+                        AssignedByUserID: assignedByUserId,
                     }
                 })
             }

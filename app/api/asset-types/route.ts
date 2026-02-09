@@ -53,14 +53,17 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
-        const { name } = await req.json()
+        const { name, ownershipType } = await req.json()
 
         if (!name || typeof name !== 'string') {
             return NextResponse.json({ error: 'Invalid name' }, { status: 400 })
         }
 
         const newType = await prisma.assetType.create({
-            data: { Name: name }
+            data: {
+                Name: name,
+                OwnershipType: ownershipType || 'Individual'
+            }
         })
 
         return NextResponse.json(newType)

@@ -5,20 +5,23 @@ import { jwtVerify } from 'jose'
 export async function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname
 
-    // Public paths
-    const publicPaths = ['/login', '/api/login', '/_next', '/favicon.ico']
-    if (publicPaths.some(p => path.startsWith(p))) {
+    // Define public paths that don't require authentication
+    const publicPaths = ['/login', '/api/login', '/api/upload', '/logo.jpg', '/logo.JPG', '/vercel.svg', '/next.svg']
+
+    // Check if the path is public or a static file (images, etc.)
+    if (
+        publicPaths.some(p => path.startsWith(p)) ||
+        path.startsWith('/_next') ||
+        path.startsWith('/static') ||
+        path.startsWith('/uploads') // Allow public uploads access
+    ) {
         return NextResponse.next()
     }
 
-    // Check auth cookie
     const token = request.cookies.get('auth_token')?.value
 
     if (!token) {
-        if (path.startsWith('/api')) {
-            console.log(`Middleware: Unauthorized access to API ${path} (No Token)`)
-            return NextResponse.json({ message: 'Unauthorized: No Token' }, { status: 401 })
-        }
+        // Redirect to login if no token
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
@@ -26,16 +29,19 @@ export async function middleware(request: NextRequest) {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret')
         await jwtVerify(token, secret)
         return NextResponse.next()
-    } catch (err: unknown) {
-        if (path.startsWith('/api')) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            console.log(`Middleware: Unauthorized access to API ${path} (Invalid Token: ${errorMessage})`)
-            return NextResponse.json({ message: `Unauthorized: Invalid Token (${errorMessage})` }, { status: 401 })
-        }
+    } catch (error) {
+        // Redirect to login if token is invalid
         return NextResponse.redirect(new URL('/login', request.url))
     }
 }
 
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+    matcher: [
+        /*
+         * Match all paths except for:
+         * 1. /api/routes and /_next/ (internal)
+         * 2. /fonts, /images, /favicon.ico (static files)
+         */
+        '/((?!api|_next/static|_next/image|favicon.ico|.*\\.jpg|.*\\.png|.*\\.svg).*)',
+    ],
 }

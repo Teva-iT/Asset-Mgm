@@ -7,8 +7,13 @@ export async function POST(request: Request) {
     try {
         const { username, password } = await request.json()
 
-        const user = await prisma.user.findUnique({
-            where: { Username: username }
+        const user = await prisma.user.findFirst({
+            where: {
+                Username: {
+                    equals: username,
+                    mode: 'insensitive'
+                }
+            }
         })
 
         if (!user) {

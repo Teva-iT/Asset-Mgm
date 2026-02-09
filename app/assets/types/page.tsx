@@ -8,11 +8,13 @@ import AssetTypeIcon from '@/components/AssetTypeIcon'
 interface AssetType {
     TypeID: string
     Name: string
+    OwnershipType?: string
 }
 
 export default function AssetTypesPage() {
     const [types, setTypes] = useState<AssetType[]>([])
     const [newType, setNewType] = useState('')
+    const [newOwnershipType, setNewOwnershipType] = useState('Individual')
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
 
@@ -49,11 +51,12 @@ export default function AssetTypesPage() {
             const res = await fetch('/api/asset-types', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newType }),
+                body: JSON.stringify({ name: newType, ownershipType: newOwnershipType }),
             })
 
             if (res.ok) {
                 setNewType('')
+                setNewOwnershipType('Individual')
                 fetchTypes() // Refresh list
             } else {
                 alert('Failed to add type')
@@ -116,7 +119,7 @@ export default function AssetTypesPage() {
     }
 
     return (
-        <div className="container" style={{ maxWidth: '800px' }}>
+        <div className="container" style={{ maxWidth: '900px' }}>
             <div className="header">
                 <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>Asset Types</h1>
                 <Link href="/assets" className="btn btn-outline" style={{ backgroundColor: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -127,16 +130,31 @@ export default function AssetTypesPage() {
 
             <div className="card mb-8">
                 <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Add New Type</h2>
-                <form onSubmit={handleAdd} style={{ display: 'flex', gap: '1rem' }}>
-                    <input
-                        type="text"
-                        value={newType}
-                        onChange={(e) => setNewType(e.target.value)}
-                        placeholder="e.g. Projector"
-                        className="input-field"
-                        style={{ flex: 1 }}
-                    />
-                    <button type="submit" disabled={adding} className="btn btn-primary">
+                <form onSubmit={handleAdd} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 2, minWidth: '200px' }}>
+                        <input
+                            type="text"
+                            value={newType}
+                            onChange={(e) => setNewType(e.target.value)}
+                            placeholder="Type Name (e.g. Projector)"
+                            className="input-field"
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                        <select
+                            value={newOwnershipType}
+                            onChange={(e) => setNewOwnershipType(e.target.value)}
+                            className="select-field"
+                            style={{ width: '100%' }}
+                        >
+                            <option value="Individual">Individual (Assign to Person)</option>
+                            <option value="Shared">Shared (Location Based)</option>
+                            <option value="Stock">Stock (Quantity Based)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" disabled={adding} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                         {adding ? 'Adding...' : 'Add Type'}
                     </button>
                 </form>
@@ -147,11 +165,20 @@ export default function AssetTypesPage() {
                 {loading ? (
                     <p>Loading...</p>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {types.map(type => (
-                            <div key={type.TypeID} className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-between group hover:border-blue-300 transition-colors">
+                            <div key={type.TypeID} className="relative p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-between group hover:border-blue-300 transition-colors">
+                                {/* Ownership Badge */}
+                                <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full border
+                                    ${type.OwnershipType === 'Individual' || !type.OwnershipType ? 'bg-blue-100 text-blue-700 border-blue-200' : ''}
+                                    ${type.OwnershipType === 'Shared' ? 'bg-orange-100 text-orange-700 border-orange-200' : ''}
+                                    ${type.OwnershipType === 'Stock' ? 'bg-purple-100 text-purple-700 border-purple-200' : ''}
+                                `}>
+                                    {type.OwnershipType || 'Individual'}
+                                </span>
+
                                 {editingId === type.TypeID ? (
-                                    <div className="w-full flex flex-col gap-2">
+                                    <div className="w-full flex flex-col gap-2 mt-6">
                                         <input
                                             value={editName}
                                             onChange={(e) => setEditName(e.target.value)}
@@ -165,10 +192,10 @@ export default function AssetTypesPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="mb-3 text-blue-500 bg-blue-50 p-3 rounded-full">
+                                        <div className="mt-4 mb-3 text-blue-500 bg-blue-50 p-3 rounded-full">
                                             <AssetTypeIcon type={type.Name} className="w-8 h-8" />
                                         </div>
-                                        <span className="font-medium text-gray-800 mb-2">{type.Name}</span>
+                                        <span className="font-medium text-gray-800 mb-2 text-center">{type.Name}</span>
                                         <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => startEdit(type)}

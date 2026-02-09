@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import LogoutButton from './LogoutButton'
 
 interface UserProfileProps {
@@ -12,10 +13,9 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ user }: UserProfileProps) {
+    const pathname = usePathname()
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
-
-    if (!user) return null
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -27,6 +27,21 @@ export default function UserProfile({ user }: UserProfileProps) {
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
+
+    if (pathname === '/login') return null
+
+    if (!user) {
+        return (
+            <div className="flex items-center gap-4">
+                <a href="/login" className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors">
+                    Log In
+                </a>
+                <a href="/login" className="btn btn-primary text-sm px-4 py-2">
+                    Sign Up
+                </a>
+            </div>
+        )
+    }
 
     return (
         <div className="relative" ref={dropdownRef}>
