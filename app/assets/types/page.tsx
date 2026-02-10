@@ -130,23 +130,21 @@ export default function AssetTypesPage() {
 
             <div className="card mb-8">
                 <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Add New Type</h2>
-                <form onSubmit={handleAdd} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 2, minWidth: '200px' }}>
+                <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                    <div className="flex-grow">
                         <input
                             type="text"
                             value={newType}
                             onChange={(e) => setNewType(e.target.value)}
                             placeholder="Type Name (e.g. Projector)"
-                            className="input-field"
-                            style={{ width: '100%' }}
+                            className="input-field w-full h-11"
                         />
                     </div>
-                    <div style={{ flex: 1, minWidth: '150px' }}>
+                    <div className="md:w-64 flex-shrink-0">
                         <select
                             value={newOwnershipType}
                             onChange={(e) => setNewOwnershipType(e.target.value)}
-                            className="select-field"
-                            style={{ width: '100%' }}
+                            className="select-field w-full h-11"
                         >
                             <option value="Individual">Individual (Assign to Person)</option>
                             <option value="Shared">Shared (Location Based)</option>
@@ -154,7 +152,11 @@ export default function AssetTypesPage() {
                         </select>
                     </div>
 
-                    <button type="submit" disabled={adding} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+                    <button
+                        type="submit"
+                        disabled={adding}
+                        className="btn btn-primary h-11 px-8 whitespace-nowrap flex items-center justify-center"
+                    >
                         {adding ? 'Adding...' : 'Add Type'}
                     </button>
                 </form>

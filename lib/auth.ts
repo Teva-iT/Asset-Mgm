@@ -5,7 +5,7 @@ import { prisma } from './db'
 import { cache } from 'react'
 
 export const getCurrentUser = cache(async () => {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth_token')?.value
 
     if (!token) return null

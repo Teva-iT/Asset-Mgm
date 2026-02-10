@@ -6,7 +6,8 @@ import EmployeeCriticalActions from '@/components/EmployeeCriticalActions'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EditEmployeePage({ params }: { params: { id: string } }) {
+export default async function EditEmployeePage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const employee = await prisma.employee.findUnique({
         where: { EmployeeID: params.id }
     })

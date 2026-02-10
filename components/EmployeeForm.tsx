@@ -17,10 +17,12 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
 
     // Department Fetching
     const [departments, setDepartments] = useState<{ DepartmentID: string, Name: string }[]>([])
+    const [loadingDepartments, setLoadingDepartments] = useState(true)
     const [selectedDepartment, setSelectedDepartment] = useState(employee?.Department || '')
 
     useEffect(() => {
         async function fetchDepartments() {
+            setLoadingDepartments(true)
             try {
                 const res = await fetch('/api/departments')
                 if (res.ok) {
@@ -29,6 +31,8 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
                 }
             } catch (err) {
                 console.error('Failed to fetch departments', err)
+            } finally {
+                setLoadingDepartments(false)
             }
         }
         fetchDepartments()
@@ -104,6 +108,7 @@ export default function EmployeeForm({ employee }: { employee?: any }) {
                             value={selectedDepartment}
                             onChange={setSelectedDepartment}
                             departments={departments}
+                            loading={loadingDepartments}
                             placeholder="Select Department"
                             className="w-full"
                         />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
+
 import * as XLSX from 'xlsx'
 import DepartmentSelect from '../DepartmentSelect'
 
@@ -272,85 +272,51 @@ export default function EnterpriseReport() {
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="card h-96 flex flex-col">
                     <h3 className="text-lg font-semibold mb-4">Assets by Status</h3>
-                    <div className="flex-grow relative">
+                    <div className="flex-grow flex items-center justify-center py-4">
                         {allAssigned ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-green-50 rounded-lg border border-green-100">
+                            <div className="flex flex-col items-center justify-center text-center p-6 bg-green-50 rounded-lg border border-green-100 w-full h-full">
                                 <div className="text-4xl mb-2">🎉</div>
                                 <h4 className="text-green-800 font-bold text-lg mb-1">100% Optimization</h4>
                                 <p className="text-green-600 text-sm">All assets are currently assigned and generative value. No idle inventory.</p>
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={statusChartData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {statusChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend verticalAlign="bottom" height={36} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <CSSPieChart data={statusChartData} />
                         )}
                     </div>
                 </div>
 
                 <div className="card h-96">
                     <h3 className="text-lg font-semibold mb-4">Top 5 Asset Types</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={data.operational.topTypes}
-                            layout="vertical"
-                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                        >
-                            <XAxis type="number" hide />
-                            <YAxis
-                                type="category"
-                                dataKey="name"
-                                width={120}
-                                tick={({ x, y, payload }) => {
-                                    const item = data.operational.topTypes.find((t: any) => t.name === payload.value)
-                                    const percent = item ? Math.round((item.count / totalTypeCount) * 100) : 0
-                                    return (
-                                        <g transform={`translate(${x},${y})`}>
-                                            <text x={0} y={0} dy={4} textAnchor="end" fill="#666" fontSize={12}>
-                                                {payload.value} <tspan fill="#999" fontSize={10}>({percent}%)</tspan>
-                                            </text>
-                                        </g>
-                                    )
-                                }}
-                            />
-                            <Tooltip
-                                cursor={{ fill: 'transparent' }}
-                                content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                        const data = payload[0].payload;
-                                        const percent = Math.round((data.count / totalTypeCount) * 100);
-                                        return (
-                                            <div className="bg-white p-2 border border-gray-200 shadow-md rounded text-sm">
-                                                <p className="font-semibold">{data.name}</p>
-                                                <p className="text-gray-600">{data.count} assets ({percent}%)</p>
-                                            </div>
-                                        );
-                                    }
-                                    return null;
-                                }}
-                            />
-                            <Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]}>
-                                {data.operational.topTypes.map((entry: any, index: number) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div className="flex flex-col justify-center h-full space-y-4 px-2 overflow-y-auto">
+                        {data.operational.topTypes.map((item: any, index: number) => {
+                            const percent = totalTypeCount > 0 ? (item.count / totalTypeCount) * 100 : 0;
+                            return (
+                                <div key={item.name} className="flex items-center gap-4">
+                                    <div className="w-24 text-sm text-gray-600 text-right font-medium truncate" title={item.name}>
+                                        {item.name}
+                                    </div>
+                                    <div className="flex-1 h-8 bg-gray-100 rounded-r-lg relative group">
+                                        <div
+                                            className="h-full rounded-r-lg transition-all duration-500 ease-out flex items-center pl-2"
+                                            style={{
+                                                width: `${Math.max(percent, 2)}%`,
+                                                backgroundColor: COLORS[index % COLORS.length]
+                                            }}
+                                        >
+                                            <span className="text-xs font-bold text-white drop-shadow-md">{item.count}</span>
+                                        </div>
+                                        {/* Simple Tooltip */}
+                                        <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none z-10 whitespace-nowrap">
+                                            {item.name}: {item.count} ({Math.round(percent)}%)
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                        {data.operational.topTypes.length === 0 && (
+                            <div className="text-center text-gray-400 py-10">No asset types found</div>
+                        )}
+                    </div>
                 </div>
             </section>
 
@@ -456,4 +422,56 @@ function RiskCard({ title, count, description, severity = 'medium', actionLabel,
             )}
         </div>
     )
+}
+
+function CSSPieChart({ data }: { data: any[] }) {
+    if (!data || data.length === 0) return <div className="text-gray-400 text-sm">No Data</div>;
+
+    const total = data.reduce((acc: number, curr: any) => acc + curr.value, 0);
+    let currentDeg = 0;
+    const gradientParts: string[] = [];
+
+    data.forEach((item: any, index: number) => {
+        if (item.value === 0) return;
+        const percent = item.value / total;
+        const deg = percent * 360;
+        const endDeg = currentDeg + deg;
+        gradientParts.push(`${COLORS[index % COLORS.length]} ${currentDeg}deg ${endDeg}deg`);
+        currentDeg = endDeg;
+    });
+
+    const gradientString = `conic-gradient(${gradientParts.join(', ')})`;
+
+    return (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+            <div
+                className="rounded-full relative shadow-sm"
+                style={{
+                    width: '200px',
+                    height: '200px',
+                    background: gradientString,
+                }}
+            >
+                {/* Donut Hole */}
+                <div className="absolute inset-0 m-auto bg-white rounded-full w-[120px] h-[120px] flex items-center justify-center shadow-inner">
+                    <div className="text-center">
+                        <span className="block text-2xl font-bold text-gray-800">{total}</span>
+                        <span className="text-xs text-gray-500 uppercase">Total</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6 max-w-xs">
+                {data.map((entry: any, index: number) => (
+                    entry.value > 0 && (
+                        <div key={index} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            <span className="text-xs text-gray-600 font-medium">{entry.name} ({Math.round(entry.value / total * 100)}%)</span>
+                        </div>
+                    )
+                ))}
+            </div>
+        </div>
+    );
 }

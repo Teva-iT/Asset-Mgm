@@ -8,7 +8,10 @@ interface User {
     UserID: string
     Username: string
     Role: string
-    createdAt: string
+    Email: string | null
+    Status: string
+    CreatedAt: string
+    UpdatedAt: string
 }
 
 export default function UsersPage() {
@@ -49,7 +52,7 @@ export default function UsersPage() {
     return (
         <div className="container">
             <div className="header">
-                <h1>Users</h1>
+                <h1>Admin Users</h1>
                 <Link href="/admin/users/new" className="btn btn-primary">+ Add User</Link>
             </div>
 
@@ -58,8 +61,11 @@ export default function UsersPage() {
                     <thead>
                         <tr>
                             <th>Username</th>
+                            <th>Email</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th>Created At</th>
+                            <th>Updated At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -67,12 +73,19 @@ export default function UsersPage() {
                         {users.map(user => (
                             <tr key={user.UserID}>
                                 <td style={{ fontWeight: 500 }}>{user.Username}</td>
+                                <td>{user.Email || '-'}</td>
                                 <td>
                                     <span className={`badge ${user.Role === 'ADMIN' ? 'badge-assigned' : 'badge-returned'}`}>
                                         {user.Role}
                                     </span>
                                 </td>
-                                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    <span className={`badge ${user.Status === 'Active' ? 'badge-available' : 'badge-maintenance'}`}>
+                                        {user.Status}
+                                    </span>
+                                </td>
+                                <td>{new Date(user.CreatedAt).toLocaleDateString()}</td>
+                                <td>{new Date(user.UpdatedAt).toLocaleDateString()}</td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <Link href={`/admin/users/${user.UserID}`} className="btn btn-primary">
@@ -90,7 +103,7 @@ export default function UsersPage() {
                         ))}
                         {users.length === 0 && (
                             <tr>
-                                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>No users found.</td>
+                                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>No users found.</td>
                             </tr>
                         )}
                     </tbody>

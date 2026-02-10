@@ -10,3 +10,9 @@
 [2026-02-08T15:50:38.973Z] Received POST request for employee creation: {"FirstName":"Mahan","LastName":"Zadeghi","Email":"mahan.zadeghi@tevapharma.ch","Department":"IT","StartDate":"2026-01-05","Status":"Active","EndDate":null}
 [2026-02-08T15:50:38.976Z] Generated slug: mahan-zadeghi
 [2026-02-08T15:50:38.988Z] Employee created successfully: 86408f38-2b91-4ab9-9026-bbe725390ac9
+[2026-02-10T12:14:21.131Z] Received POST request for employee creation: {"FirstName":"Soraya","LastName":"Mancusi","Email":"Soraya.Mancusi@mepha.ch","DepartmentHidden":"Sales","StartDate":"2026-02-10","Status":"Active","EndDate":null,"Department":"Sales"}
+[2026-02-10T12:14:21.151Z] Generated slug: soraya-mancusi
+[2026-02-10T12:14:21.192Z] Employee created successfully: 470a7863-fa1c-4cc3-85f7-906ef7c16cfd
+[2026-02-10T22:20:21.497Z] Received POST request for employee creation: {"FirstName":"Soraya","LastName":"Mancusi","Email":"Soraya.Mancusi@mepha.ch","DepartmentHidden":"Sales","StartDate":"2026-02-11","Status":"Active","EndDate":null,"Department":"Sales"}
+[2026-02-10T22:20:21.527Z] Generated slug: soraya-mancusi
+[2026-02-10T22:20:21.551Z] Employee created successfully: 3c1c393c-2afe-4d55-b71c-b4cfc77e1dea

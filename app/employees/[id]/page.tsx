@@ -5,7 +5,8 @@ import ReturnButton from '@/components/ReturnButton'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EmployeeDetailPage({ params }: { params: { id: string } }) {
+export default async function EmployeeDetailPage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     let employee = await prisma.employee.findUnique({
         where: { EmployeeID: params.id },
         include: {

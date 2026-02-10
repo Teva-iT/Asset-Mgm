@@ -52,6 +52,20 @@ export default function InventoryScanner() {
     const lastKeyTime = useRef<number>(0)
     const isRapidInput = useRef<boolean>(true) // Assume rapid until proven slow
 
+    // Global listener to prevent Scanner quirks (like Ctrl+J opening Downloads) even when input is not focused
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // Block Ctrl+J (Downloads) and unrelated Enter keys if needed
+            if ((e.ctrlKey && e.key === 'j') || e.keyCode === 10) {
+                e.preventDefault()
+                // Optionally refocus input if it was lost?
+                // inputRef.current?.focus()
+            }
+        }
+        window.addEventListener('keydown', handleGlobalKeyDown)
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+    }, [])
+
     // Reset detection on empty query
     useEffect(() => {
         if (!query) {
@@ -61,6 +75,11 @@ export default function InventoryScanner() {
     }, [query])
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        // Prevent Chrome "Downloads" shortcut (Ctrl+J) often triggered by Scanner "Line Feed" suffix
+        if ((e.ctrlKey && e.key === 'j') || e.key === 'Process' || e.keyCode === 10) {
+            e.preventDefault()
+        }
+
         const now = Date.now()
         const diff = now - lastKeyTime.current
 
@@ -247,19 +266,9 @@ export default function InventoryScanner() {
                             </p>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
-                            {/* Quick Actions */}
-                            {result.Status === 'Available' && (
-                                <Link href={`/assets/${result.AssetID}/assign`} className="btn btn-primary flex-1 md:flex-none text-center">
-                                    Assign User
-                                </Link>
-                            )}
-                            {result.Status === 'Assigned' && (
-                                <Link href={`/assets/${result.AssetID}/return`} className="btn btn-outline flex-1 md:flex-none text-center bg-white">
-                                    Return Asset
-                                </Link>
-                            )}
-                            <Link href={`/assets/${result.AssetID}/edit`} className="btn btn-outline flex-1 md:flex-none text-center bg-white">
-                                Edit
+                            {/* Quick Actions - standardized to Jump to CI Detail */}
+                            <Link href={`/inventory/cmdb/cis/${result.AssetID}`} className="btn btn-primary flex-1 md:flex-none text-center">
+                                View Details & Actions
                             </Link>
                         </div>
                     </div>

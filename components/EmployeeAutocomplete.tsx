@@ -23,6 +23,10 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee }: Empl
     const wrapperRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
+        setSelected(defaultEmployee || null)
+    }, [defaultEmployee])
+
+    useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false)

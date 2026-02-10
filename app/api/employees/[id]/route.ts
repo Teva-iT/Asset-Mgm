@@ -3,8 +3,9 @@ import { prisma } from '@/lib/db'
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         let employee = await prisma.employee.findUnique({
             where: { EmployeeID: params.id },
@@ -36,8 +37,9 @@ export async function GET(
 
 export async function PUT(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const body = await request.json()
         const { FirstName, LastName, Email, Department, StartDate, Status, EndDate } = body
@@ -67,7 +69,7 @@ export async function PUT(
             })
 
             // 2. Handle "Leaving" Transition logic
-            if (isTransitioningToLeaving && EndDate) {
+            if (currentEmployee && isTransitioningToLeaving && EndDate) {
                 console.log(`[📧 EMAIL STUB] Sending departure email to ${Email} and IT Dept. Subject: Employee Departure - ${FirstName} ${LastName}`)
 
                 // Update Active Assignments Return Date
@@ -97,8 +99,9 @@ export async function PUT(
 
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const employeeId = params.id
 

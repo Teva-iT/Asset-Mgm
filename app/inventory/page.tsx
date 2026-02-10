@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import InventoryScanner from '@/components/InventoryScanner'
+import AssetImporter from '@/components/inventory/AssetImporter'
 
 const prisma = new PrismaClient()
 
@@ -7,20 +8,19 @@ const prisma = new PrismaClient()
 export const dynamic = 'force-dynamic'
 
 async function getInventoryData() {
-    // Fetch all assets with their type and status
-    // We want assets that are NOT currently assigned to an active assignment
-    const assets = await prisma.asset.findMany({
-        include: {
+    // Fetch all assets that are NOT currently assigned (In Stock)
+    // Optimized: Filter at DB level instead of fetching all and filtering in memory
+    const inStockAssets = await prisma.asset.findMany({
+        where: {
             assignments: {
-                where: {
+                none: {
                     Status: 'Active'
                 }
-            }
+            },
+            // Optional: Also ensure status isn't 'Retired' or 'lost' if that's the rule?
+            // For now matching previous logic: just "no active assignment"
         }
     })
-
-    // Filter for unassigned assets (in stock)
-    const inStockAssets = assets.filter(asset => asset.assignments.length === 0)
 
     return inStockAssets
 }
@@ -77,7 +77,12 @@ export default async function InventoryPage() {
             </div>
 
             {/* Inventory Scanner Input */}
-            <InventoryScanner />
+            <div className="flex flex-col md:flex-row gap-4 mb-8">
+                <div className="flex-1">
+                    <InventoryScanner />
+                </div>
+                <AssetImporter />
+            </div>
 
             {/* 1. Inventory Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-10">

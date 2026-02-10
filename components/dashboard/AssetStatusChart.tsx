@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+
 
 const COLORS = ['#059669', '#7c3aed', '#dc2626', '#ef4444', '#f59e0b', '#6b7280']
 
@@ -10,38 +10,61 @@ interface DataPoint {
 }
 
 export default function AssetStatusChart({ data }: { data: DataPoint[] }) {
-    // If no data, show a placeholder "gray" chart to keep the visual weight
-    const chartData = data.every(d => d.value === 0)
-        ? [{ name: 'No Data', value: 1, color: '#e5e7eb' }]
-        : data
+    // Check if we have data
+    const hasData = data.some(d => d.value > 0);
 
-    const isPlaceholder = data.every(d => d.value === 0)
+    // Calculate total for percentages
+    const total = data.reduce((acc, curr) => acc + curr.value, 0);
+
+    // Generate conic-gradient string
+    let currentDeg = 0;
+    const gradientParts = [];
+
+    if (!hasData) {
+        gradientParts.push(`#e5e7eb 0deg 360deg`);
+    } else {
+        data.forEach((item, index) => {
+            if (item.value === 0) return;
+
+            const percent = item.value / total;
+            const deg = percent * 360;
+            const endDeg = currentDeg + deg;
+
+            gradientParts.push(`${COLORS[index % COLORS.length]} ${currentDeg}deg ${endDeg}deg`);
+            currentDeg = endDeg;
+        });
+    }
+
+    const gradientString = `conic-gradient(${gradientParts.join(', ')})`;
 
     return (
-        <div className="h-72 w-full flex flex-col items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                    <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={100}
-                        paddingAngle={isPlaceholder ? 0 : 5}
-                        dataKey="value"
-                        stroke="none"
-                    >
-                        {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={isPlaceholder ? '#e5e7eb' : (COLORS[index % COLORS.length])} />
-                        ))}
-                    </Pie>
-                    {!isPlaceholder && <Tooltip cursor={false} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />}
-                    {!isPlaceholder && <Legend verticalAlign="bottom" height={36} iconType="circle" />}
-                </PieChart>
-            </ResponsiveContainer>
-            {isPlaceholder && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-gray-400 text-sm font-medium">No Data</span>
+        <div className="h-72 w-full flex flex-col items-center justify-center relative">
+            {/* CSS Pie Chart */}
+            <div
+                className="rounded-full relative"
+                style={{
+                    width: '200px',
+                    height: '200px',
+                    background: gradientString,
+                }}
+            >
+                {/* Inner White Circle for Donut Effect */}
+                <div className="absolute inset-0 m-auto bg-white rounded-full w-[160px] h-[160px] flex items-center justify-center">
+                    {!hasData && <span className="text-gray-400 text-sm font-medium">No Data</span>}
+                </div>
+            </div>
+
+            {/* Legend */}
+            {hasData && (
+                <div className="flex flex-wrap justify-center gap-4 mt-6">
+                    {data.map((entry, index) => (
+                        entry.value > 0 && (
+                            <div key={index} className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                <span className="text-xs text-gray-600 font-medium">{entry.name}</span>
+                            </div>
+                        )
+                    ))}
                 </div>
             )}
         </div>

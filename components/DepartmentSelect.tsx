@@ -9,9 +9,10 @@ interface DepartmentSelectProps {
     departments: { DepartmentID: string, Name: string }[]
     placeholder?: string
     className?: string
+    loading?: boolean
 }
 
-export default function DepartmentSelect({ value, onChange, departments, placeholder = "Select Department", className = "" }: DepartmentSelectProps) {
+export default function DepartmentSelect({ value, onChange, departments, placeholder = "Select Department", className = "", loading = false }: DepartmentSelectProps) {
     const [isOpen, setIsOpen] = useState(false)
     const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -68,7 +69,9 @@ export default function DepartmentSelect({ value, onChange, departments, placeho
                         <span className="text-sm">All Departments</span>
                     </div>
 
-                    {departments.length > 0 ? (
+                    {loading ? (
+                        <div className="px-3 py-2 text-gray-500 text-sm italic">Loading departments...</div>
+                    ) : departments.length > 0 ? (
                         departments.map((dept) => (
                             <div
                                 key={dept.DepartmentID}
@@ -83,7 +86,7 @@ export default function DepartmentSelect({ value, onChange, departments, placeho
                             </div>
                         ))
                     ) : (
-                        <div className="px-3 py-2 text-gray-400 text-sm">Loading...</div>
+                        <div className="px-3 py-2 text-gray-500 text-sm italic">No departments found.</div>
                     )}
                 </div>
             )}

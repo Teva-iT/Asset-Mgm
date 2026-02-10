@@ -24,29 +24,7 @@ model ScanHistory {
   ScannedBy       User?   @relation(fields: [ScannedByUserID], references: [UserID])
 }
 
-model Asset {
-  AssetID      String   @id @default(uuid())
-  AssetType    String?
-  OwnershipType String? // Individual, Shared, Stock
-  Quantity     Int?     @default(1)
-  Location     String?  // For shared assets
-  AssetName    String?
-  Brand        String?
-  Model        String?
-  SerialNumber String?
-  DeviceTag    String?
-  Status       String?   // Available, Assigned, Returned, Lost, Damaged, In Stock
-  Condition    String?   // New (Unboxed), Used (Good), Used (Needs Check), Damaged
-  OperationalState String? // Not Imaged, Imaged (Ready), In Preparation, Retired
-  PurchaseDate DateTime?
-  Notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  assignments  Assignment[]
-  ScanHistory  ScanHistory[]
-  Photos       AssetPhoto[]
-}
 
 model AssetPhoto {
   PhotoID     String   @id @default(uuid())
@@ -96,12 +74,16 @@ model Assignment {
 model User {
   UserID       String         @id @default(uuid())
   Username     String         @unique
+  Email        String?        @unique
   Password     String
   Role         String         @default("VIEWER") // ADMIN, VIEWER
+  ResetCode    String?
+  ResetCodeExpiry DateTime?
   CreatedAt    DateTime       @default(now())
   UpdatedAt    DateTime       @updatedAt
   AssignedAssets Assignment[] @relation("AssignedBy")
   ScannedHistory ScanHistory[]
+  AuditLogs      AuditLog[]
 }
 
 model AssetType {
@@ -113,10 +95,12 @@ model AssetType {
 }
 
 model Department {
-  DepartmentID String   @id @default(uuid())
-  Name         String   @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  DepartmentID String   @id @default(dbgenerated("gen_random_uuid()")) @map("departmentid") @db.Uuid
+  Name         String   @map("name")
+  createdAt    DateTime @default(now()) @map("createdat")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updatedat")
+
+  @@map("department")
 }
 
 model AssetRequest {
@@ -130,4 +114,162 @@ model AssetRequest {
   Status        String   @default("Pending") // Pending, Approved, Completed
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// --- CMDB CORE LAYERS ---
+
+model Manufacturer {
+  ManufacturerID String       @id @default(uuid())
+  Name           String       @unique
+  Website        String?
+  SupportEmail   String?
+  SupportPhone   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  models         AssetModel[]
+}
+
+model AssetModel {
+  ModelID        String       @id @default(uuid())
+  Name           String       // e.g. "Latitude 5520"
+  ModelNumber    String?      // e.g. "L5520-X1"
+  Category       String       // e.g. "Laptop", "Printer", "Toner"
+  
+  ManufacturerID String
+  Manufacturer   Manufacturer @relation(fields: [ManufacturerID], references: [ManufacturerID])
+  
+  Description    String?
+  ImageURL       String?
+  EOLDate        DateTime?    // End of Life
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relationships
+  assets         Asset[]      // Instances of this model
+  vendors        Vendor[]     @relation("ModelVendors") // Preferred vendors
+  
+  // Model-to-Model Relationships (e.g. Printer Model USES Toner Model)
+  parentRelationships ModelRelationship[] @relation("ParentModel")
+  childRelationships  ModelRelationship[] @relation("ChildModel")
+}
+
+model ModelRelationship {
+  RelationshipID String     @id @default(uuid())
+  ParentModelID  String
+  ChildModelID   String
+  Type           String     // e.g. "USES", "COMPATIBLE_WITH", "CONTAINS"
+  
+  ParentModel    AssetModel @relation("ParentModel", fields: [ParentModelID], references: [ModelID])
+  ChildModel     AssetModel @relation("ChildModel", fields: [ChildModelID], references: [ModelID])
+
+  @@unique([ParentModelID, ChildModelID, Type])
+}
+
+model Vendor {
+  VendorID      String       @id @default(uuid())
+  Name          String       @unique
+  ContactName   String?
+  Email         String?
+  Phone         String?
+  Address       String?
+  Website       String?
+  ContractStart DateTime?
+  ContractEnd   DateTime?
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  models        AssetModel[] @relation("ModelVendors") // Items they supply
+  procurements  ProcurementRequest[]
+}
+
+model ProcurementRequest {
+  RequestID       String      @id @default(uuid())
+  RequesterUserID String
+  
+  Status          String      @default("PENDING") // PENDING, APPROVED, ORDERED, RECEIVED, CANCELLED
+  
+  VendorID        String?
+  Vendor          Vendor?     @relation(fields: [VendorID], references: [VendorID])
+  
+  CostCenter      String?
+  TotalCost       Decimal?
+  Currency        String      @default("USD")
+  
+  Notes           String?
+  OrderDate       DateTime?
+  ExpectedDate    DateTime?
+  ReceivedDate    DateTime?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Create CIs from this request
+  items           ProcurementItem[]
+}
+
+model ProcurementItem {
+  ItemID          String             @id @default(uuid())
+  RequestID       String
+  Request         ProcurementRequest @relation(fields: [RequestID], references: [RequestID])
+  
+  ModelID         String
+  Quantity        Int
+  UnitPrice       Decimal?
+  
+  // If registered as Assets
+  createdAssets   Asset[]
+}
+
+// --- UPDATED EXISTING MODELS ---
+
+model Asset {
+  AssetID      String   @id @default(uuid())
+  
+  // Link to Abstract Model (The "Right Way")
+  ModelID      String?
+  AssetModel   AssetModel? @relation(fields: [ModelID], references: [ModelID])
+
+  AssetType    String?
+  OwnershipType String? // Individual, Shared, Stock
+  Quantity     Int?     @default(1)
+  Location     String?  // For shared assets
+  AssetName    String?
+  Brand        String?  // @deprecated - use AssetModel.Manufacturer
+  Model        String?  // @deprecated - use AssetModel.Name
+  SerialNumber String?  @unique
+  AssetTag     String?  @unique // Renamed from DeviceTag in spirit, kept same DB column if possible or mapped
+  DeviceTag    String?  @unique // Keeping original column name for now to avoid data loss, map UI to "Asset Tag"
+  
+  Status       String?   // Available, Assigned, Returned, Lost, Damaged, In Stock
+  Condition    String?   // New (Unboxed), Used (Good), Used (Needs Check), Damaged
+  OperationalState String? // Not Imaged, Imaged (Ready), In Preparation, Retired
+  PurchaseDate DateTime?
+  Notes        String?
+  
+  // Procurement Link
+  ProcurementItemID String?
+  ProcurementItem   ProcurementItem? @relation(fields: [ProcurementItemID], references: [ItemID])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignments  Assignment[]
+  ScanHistory  ScanHistory[]
+  Photos       AssetPhoto[]
+  AuditLogs    AuditLog[]
+}
+
+model AuditLog {
+  LogID     String   @id @default(uuid())
+  AssetID   String
+  Action    String   // CREATE, UPDATE, ASSIGN, RETURN, DELETE
+  Details   String?  // Description of change
+  UserID    String?  // Who did it
+  Timestamp DateTime @default(now())
+
+  Asset     Asset    @relation(fields: [AssetID], references: [AssetID], onDelete: Cascade)
+  User      User?    @relation(fields: [UserID], references: [UserID])
 }

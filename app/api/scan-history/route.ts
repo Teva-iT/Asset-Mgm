@@ -9,7 +9,7 @@ export async function POST(request: Request) {
         const { outcome, method, query, assetId, assetStatus } = body
 
         // --- Auth Check (Optional for Logging? No, should be authenticated) ---
-        const cookieStore = cookies()
+        const cookieStore = await cookies()
         const token = cookieStore.get('auth_token')?.value
         let userId = null
 

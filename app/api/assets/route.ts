@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { jwtVerify } from 'jose'
+import { logAudit, AuditAction } from '@/lib/audit'
 
 // Helper to get User Info from token
 async function getUserInfo(request: NextRequest): Promise<{ id: string, role: string } | null> {
@@ -119,13 +120,28 @@ export async function POST(request: NextRequest) {
                         AssignedByUserID: assignedByUserId,
                     }
                 })
+
+                await logAudit(newAsset.AssetID, AuditAction.ASSIGN, `Assigned to employee ${body.assignment.employeeId}`, assignedByUserId)
             }
+
+            await logAudit(newAsset.AssetID, AuditAction.CREATE, `Asset created via API`, userInfo.id)
+
 
             return newAsset
         })
         return NextResponse.json(asset, { status: 201 })
     } catch (error: any) {
         console.error('Error creating asset:', error)
+        if (error.code === 'P2002') {
+            const target = error.meta?.target || []
+            if (target.includes('SerialNumber')) {
+                return NextResponse.json({ error: 'Serial Number already exists' }, { status: 409 })
+            }
+            if (target.includes('DeviceTag')) {
+                return NextResponse.json({ error: 'Device Tag already exists' }, { status: 409 })
+            }
+            return NextResponse.json({ error: 'Asset identifier already exists' }, { status: 409 })
+        }
         return NextResponse.json({ error: error.message || 'Failed to create asset' }, { status: 500 })
     }
 }

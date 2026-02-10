@@ -19,7 +19,7 @@ export default function RecentActivityList({ assignments }: { assignments: Assig
     return (
         <div className="space-y-4">
             {assignments.map((assignment) => (
-                <div key={assignment.AssignmentID} className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow">
+                <div key={assignment.AssignmentID} className="flex flex-wrap items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow gap-4">
                     <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                             {assignment.Employee.FirstName[0]}{assignment.Employee.LastName[0]}

@@ -5,7 +5,7 @@ import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/db'
 
 async function getCurrentUser() {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const token = cookieStore.get('auth_token')?.value
 
     if (!token) return null
@@ -17,7 +17,7 @@ async function getCurrentUser() {
         if (typeof payload.userId === 'string') {
             const user = await prisma.user.findUnique({
                 where: { UserID: payload.userId },
-                select: { Username: true, Role: true } // Assuming Username is the name for now
+                select: { UserID: true, Username: true, Role: true } // Assuming Username is the name for now
             })
             if (user) {
                 return { name: user.Username, role: user.Role, id: user.UserID }

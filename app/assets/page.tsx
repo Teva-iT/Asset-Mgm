@@ -2,12 +2,17 @@ import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import AssetList from '@/components/AssetList'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 10 // Cache for 10 seconds
 
 export default async function AssetsPage() {
     // Fetch data
     const assets = await prisma.asset.findMany({
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        include: {
+            AssetModel: {
+                include: { Manufacturer: true }
+            }
+        }
     })
 
     // Calculate stats

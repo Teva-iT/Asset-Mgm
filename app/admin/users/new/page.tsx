@@ -66,6 +66,17 @@ export default function NewUserPage() {
                         </div>
 
                         <div className="form-group">
+                            <label className="form-label" htmlFor="email">Email</label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                className="input-field"
+                                placeholder="user@example.com"
+                            />
+                        </div>
+
+                        <div className="form-group">
                             <label className="form-label" htmlFor="password">Password</label>
                             <input
                                 id="password"

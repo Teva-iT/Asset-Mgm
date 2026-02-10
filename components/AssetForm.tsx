@@ -10,19 +10,19 @@ import AssetTypeSelect from './AssetTypeSelect'
 // Define types for better TS support
 interface Asset {
     AssetID: string
-    AssetType: string
-    OwnershipType?: string
-    Quantity?: number
-    Location?: string
-    AssetName: string
-    Brand: string
-    Model: string
-    SerialNumber: string
+    AssetType: string | null
+    OwnershipType?: string | null
+    Quantity?: number | null
+    Location?: string | null
+    AssetName: string | null
+    Brand: string | null
+    Model: string | null
+    SerialNumber: string | null
     DeviceTag: string | null
-    Status: string
+    Status: string | null
     Condition?: string | null
     OperationalState?: string | null
-    PurchaseDate: string
+    PurchaseDate?: string | null
     Notes: string | null
 }
 
@@ -223,23 +223,13 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
     return (
         <form onSubmit={handleSubmit} className="card max-w-4xl mx-auto relative">
             {/* Mode Badge */}
-            <div className="absolute top-6 right-6 flex gap-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                    ${isIndividual ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
-                    ${isShared ? 'bg-orange-50 text-orange-700 border-orange-200' : ''}
-                    ${isStock ? 'bg-purple-50 text-purple-700 border-purple-200' : ''}
-                 `}>
-                    {ownershipType} Asset
-                </span>
-            </div>
-
             {/* Section 1: Core Identity */}
             <div className="mb-8 pt-2">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
                     <h3 className="text-lg font-semibold">Asset Identity</h3>
-                    <Link href="/assets/types" className="btn btn-primary" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+                    <Link href="/assets/types" className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
                         Manage Types
-                        <span style={{ fontSize: '1.1em' }}>↗</span>
+                        <span>↗</span>
                     </Link>
                 </div>
 
@@ -327,7 +317,7 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
                         <input
                             id="AssetName"
                             name="AssetName"
-                            defaultValue={asset?.AssetName}
+                            defaultValue={asset?.AssetName || ''}
                             className="input-field"
                             placeholder="e.g. AST-001"
                         />
@@ -338,7 +328,7 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
                         <input
                             id="Brand"
                             name="Brand"
-                            defaultValue={asset?.Brand}
+                            defaultValue={asset?.Brand || ''}
                             className="input-field"
                             placeholder="e.g. Dell"
                         />
@@ -349,7 +339,7 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
                         <input
                             id="Model"
                             name="Model"
-                            defaultValue={asset?.Model}
+                            defaultValue={asset?.Model || ''}
                             className="input-field"
                             placeholder="e.g. Latitude 5440"
                         />
@@ -543,7 +533,7 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
 
             {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="flex gap-4 flex-wrap">
                 <button type="submit" disabled={loading || uploading} className="btn btn-primary">
                     {loading ? 'Saving...' : (asset ? 'Update Asset' : (isAssignmentEnabled ? 'Create & Assign' : 'Add to Inventory'))}
                 </button>
