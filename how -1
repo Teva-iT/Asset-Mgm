@@ -1,0 +1,110 @@
+[33mcommit dd5b215f4b759d95aa645bb71cd3dc75fdf12a98[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: mahan-teh <mahan.zadeghi@hotmail.com>
+Date:   Sun Feb 8 13:52:16 2026 +0100
+
+    initial commit
+
+[1mdiff --git a/.env b/.env[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7163cb0[m
+[1m--- /dev/null[m
+[1m+++ b/.env[m
+[36m@@ -0,0 +1 @@[m
+[32m+[m[32mDATABASE_URL="postgresql://postgres:2244@localhost:5432/postgres?schema=public"[m[41m[m
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..08b2553[m
+[1m--- /dev/null[m
+[1m+++ b/.gitignore[m
+[36m@@ -0,0 +1 @@[m
+[32m+[m[32mnode_modules[m[41m[m
+[1mdiff --git a/.next/app-build-manifest.json b/.next/app-build-manifest.json[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b042a20[m
+[1m--- /dev/null[m
+[1m+++ b/.next/app-build-manifest.json[m
+[36m@@ -0,0 +1,50 @@[m
+[32m+[m[32m{[m
+[32m+[m[32m  "pages": {[m
+[32m+[m[32m    "/layout": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/css/app/layout.css",[m
+[32m+[m[32m      "static/chunks/app/layout.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/assets/types/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/assets/types/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/assets/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/assets/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/assets/new/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/assets/new/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/employees/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/employees/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/employees/new/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/employees/new/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/employees/[id]/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/employees/[id]/page.js"[m
+[32m+[m[32m    ],[m
+[32m+[m[32m    "/employees/[id]/edit/page": [[m
+[32m+[m[32m      "static/chunks/webpack.js",[m
+[32m+[m[32m      "static/chunks/main-app.js",[m
+[32m+[m[32m      "static/chunks/app/employees/[id]/edit/page.js"[m
+[32m+[m[32m    ][m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/.next/build-manifest.json b/.next/build-manifest.json[m
+[1mnew file mode 100644[m
+[1mindex 0000000..018cb67[m
+[1m--- /dev/null[m
+[1m+++ b/.next/build-manifest.json[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32m{[m
+[32m+[m[32m  "polyfillFiles": [[m
+[32m+[m[32m    "static/chunks/polyfills.js"[m
+[32m+[m[32m  ],[m
+[32m+[m[32m  "devFiles": [],[m
+[32m+[m[32m  "ampDevFiles": [],[m
+[32m+[m[32m  "lowPriorityFiles": [[m
+[32m+[m[32m    "static/development/_buildManifest.js",[m
+[32m+[m[32m    "static/development/_ssgManifest.js"[m
+[32m+[m[32m  ],[m
+[32m+[m[32m  "rootMainFiles": [[m
+[32m+[m[32m    "static/chunks/webpack.js",[m
+[32m+[m[32m    "static/chunks/main-app.js"[m
+[32m+[m[32m  ],[m
+[32m+[m[32m  "pages": {[m
+[32m+[m[32m    "/_app": [][m
+[32m+[m[32m  },[m
+[32m+[m[32m  "ampFirstPages": [][m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/.next/cache/.tsbuildinfo b/.next/cache/.tsbuildinfo[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b04d0d2[m
+[1m--- /dev/null[m
+[1m+++ b/.next/cache/.tsbuildinfo[m
+[36m@@ -0,0 +1 @@[m
+[32m+[m[32m{"fileNames":["../../node_modules/typescript/lib/lib.es5.d.ts","../../node_modules/typescript/lib/lib.es2015.d.ts","../../node_modules/typescript/lib/lib.es2016.d.ts","../../node_modules/typescript/lib/lib.es2017.d.ts","../../node_modules/typescript/lib/lib.es2018.d.ts","../../node_modules/typescript/lib/lib.es2019.d.ts","../../node_modules/typescript/lib/lib.es2020.d.ts","../../node_modules/typescript/lib/lib.es2021.d.ts","../../node_modules/typescript/lib/lib.es2022.d.ts","../../node_modules/typescript/lib/lib.es2023.d.ts","../../node_modules/typescript/lib/lib.es2024.d.ts","../../node_modules/typescript/lib/lib.esnext.d.ts","../../node_modules/typescript/lib/lib.dom.d.ts","../../node_modules/typescript/lib/lib.dom.iterable.d.ts","../../node_modules/typescript/lib/lib.es2015.core.d.ts","../../node_modules/typescript/lib/lib.es2015.collection.d.ts","../../node_modules/typescript/lib/lib.es2015.generator.d.ts","../../node_modules/typescript/lib/lib.es2015.iterable.d.ts","../../node_modules/typescript/lib/lib.es2015.promise.d.ts","../../node_modules/typescript/lib/lib.es2015.proxy.d.ts","../../node_modules/typescript/lib/lib.es2015.reflect.d.ts","../../node_modules/typescript/lib/lib.es2015.symbol.d.ts","../../node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts","../../node_modules/typescript/lib/lib.es2016.array.include.d.ts","../../node_modules/typescript/lib/lib.es2016.intl.d.ts","../../node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts","../../node_modules/typescript/lib/lib.es2017.date.d.ts","../../node_modules/typescript/lib/lib.es2017.object.d.ts","../../node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts","../../node_modules/typescript/lib/lib.es2017.string.d.ts","../../node_modules/typescript/lib/lib.es2017.intl.d.ts","../../node_modules/typescript/lib/lib.es2017.typedarrays.d.ts","../../node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts","../../node_modules/typescript/lib/lib.es2018.asynciterable.d.ts","../../node_modules/typescript/lib/lib.es2018.intl.d.ts","../../node_modules/typescript/lib/lib.es2018.promise.d.ts","../../node_modules/typescript/lib/lib.es2018.regexp.d.ts","../../node_modules/typescript/lib/lib.es2019.array.d.ts","../../node_modules/typescript/lib/lib.es2019.object.d.ts","../../node_modules/typescript/lib/lib.es2019.string.d.ts","../../node_modules/typescript/lib/lib.es2019.symbol.d.ts","../../node_modules/typescript/lib/lib.es2019.intl.d.ts","../../node_modules/typescript/lib/lib.es2020.bigint.d.ts","../../node_modules/typescript/lib/lib.es2020.date.d.ts","../../node_modules/typescript/lib/lib.es2020.promise.d.ts","../../node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts","../../node_modules/typescript/lib/lib.es2020.string.d.ts","../../node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts","../../node_modules/typescript/lib/lib.es2020.intl.d.ts","../../node_modules/typescript/lib/lib.es2020.number.d.ts","../../node_modules/typescript/lib/lib.es2021.promise.d.ts","../../node_modules/typescript/lib/lib.es2021.string.d.ts","../../node_modules/typescript/lib/lib.es2021.weakref.d.ts","../../node_modules/typescript/lib/lib.es2021.intl.d.ts","../../node_modules/typescript/lib/lib.es2022.array.d.ts","../../node_modules/typescript/lib/lib.es2022.error.d.ts","../../node_modules/typescript/lib/lib.es2022.intl.d.ts","../../node_modules/typescript/lib/lib.es2022.object.d.ts","../../node_modules/typescript/lib/lib.es2022.string.d.ts","../../node_modules/typescript/lib/lib.es2022.regexp.d.ts","../../node_modules/typescript/lib/lib.es2023.array.d.ts","../../node_modules/typescript/lib/lib.es2023.collection.d.ts","../../node_modules/typescript/lib/lib.es2023.intl.d.ts","../../node_modules/typescript/lib/lib.es2024.arraybuffer.d.ts","../../node_modules/typescript/lib/lib.es2024.collection.d.ts","../../node_modules/typescript/lib/lib.es2024.object.d.ts",

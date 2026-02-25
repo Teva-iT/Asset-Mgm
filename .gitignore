@@ -1,0 +1,13 @@
+.next/
+node_modules/
+*.log
+.env*
+.env.local
+*.ini
+
+
+api_debug.log 
+server_debug.log
+public/uploads/
+supabase/.temp
+
