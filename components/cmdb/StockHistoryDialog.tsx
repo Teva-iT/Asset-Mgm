@@ -31,13 +31,14 @@ export default function StockHistoryDialog({ model }: { model: any }) {
         setLoading(true);
         fetch(`/api/inventory-history?modelId=${model.ModelID}`)
             .then(r => r.json())
-            .then(data => setRecords(data || []))
+            .then(data => setRecords(Array.isArray(data) ? data : []))
             .catch(() => setRecords([]))
             .finally(() => setLoading(false));
     }, [open, model.ModelID]);
 
     // ─── Unique locations for dropdown ───────────────
     const locations = useMemo(() => {
+        if (!Array.isArray(records)) return [];
         const names = records
             .map(r => r.StorageLocation?.Name)
             .filter(Boolean) as string[];
