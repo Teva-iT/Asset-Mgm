@@ -72,7 +72,7 @@ export default function LicensesPage() {
         <div className="container">
             <div className="header">
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>📋 License Management</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>📋 Licenses</h1>
                     <p className="text-sm text-gray-500 mt-1">{licenses.length} licenses tracked</p>
                 </div>
                 <Link href="/licenses/new" className="btn btn-primary">+ Add License</Link>

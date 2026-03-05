@@ -30,7 +30,7 @@ export default async function WarrantiesPage() {
         <div className="container">
             <div className="header">
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>🛡️ Warranty Tracking</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>🛡️ Warranties</h1>
                     <p className="text-sm text-gray-500 mt-1">{all.length} assets tracked</p>
                 </div>
                 <Link href="/assets" className="btn btn-outline">← Assets</Link>

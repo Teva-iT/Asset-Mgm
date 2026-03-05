@@ -13,8 +13,12 @@ export default function NavBar({ user }: { user?: any }) {
     const links = [
         { name: 'Home', href: '/' },
         { name: 'Asset Management', href: '/assets' },
-        { name: 'Warranties', href: '/warranties' },
-        { name: 'Licenses', href: '/licenses' },
+        {
+            name: 'Agreements', href: '#', subItems: [
+                { name: 'Warranties', href: '/warranties' },
+                { name: 'Licenses', href: '/licenses' }
+            ]
+        },
         {
             name: 'Service Requests', href: '#', subItems: [
                 { name: 'Hardware Requests', href: '/admin/requests' },
