@@ -30,10 +30,7 @@ export default function InventoryNav() {
             name: "Procurement",
             href: "/inventory/procurement",
             icon: ShoppingCart,
-            items: [
-                { name: "Dashboard", href: "/inventory/procurement" },
-                { name: "New Request", href: "/inventory/procurement/new" },
-            ]
+            exact: false
         }
     ];
 
