@@ -11,7 +11,9 @@ export async function getAssetModels() {
         console.log("MODELS RES:", modelsRes.error, modelsRes.data?.length);
 
         const mfrsRes = await supabase.from("Manufacturer").select("ManufacturerID, Name");
-        const assetsRes = await supabase.from("Asset").select("ModelID");
+        const assetsRes = await supabase.from("Asset").select("ModelID, StorageLocationID");
+        const invRes = await supabase.from("InventoryRecord").select("ModelID, StorageLocationID");
+        const locsRes = await supabase.from("StorageLocation").select("LocationID, Name");
 
         if (modelsRes.error) {
             console.error("Models Error", modelsRes.error);
@@ -21,14 +23,39 @@ export async function getAssetModels() {
         const models = modelsRes.data || [];
         const mfrs = mfrsRes.data || [];
         const assets = assetsRes.data || [];
+        const inventory = invRes.data || [];
+        const locations = locsRes.data || [];
+
+        // Map location IDs to names
+        const locMap: Record<string, string> = {};
+        for (const loc of locations) {
+            locMap[loc.LocationID] = loc.Name;
+        }
 
         return models.map((m: any) => {
             const manufacturer = mfrs.find((mfr: any) => mfr.ManufacturerID === m.ManufacturerID) || { Name: 'Unknown' };
-            const assetCount = assets.filter((a: any) => a.ModelID === m.ModelID).length;
+            const assetList = assets.filter((a: any) => a.ModelID === m.ModelID);
+            const assetCount = assetList.length;
+
+            // Gather all distinct location IDs from both assets and inventory records for this model
+            const modelLocIds = new Set<string>();
+
+            assetList.forEach((a: any) => {
+                if (a.StorageLocationID) modelLocIds.add(a.StorageLocationID);
+            });
+
+            inventory.filter((inv: any) => inv.ModelID === m.ModelID).forEach((inv: any) => {
+                if (inv.StorageLocationID) modelLocIds.add(inv.StorageLocationID);
+            });
+
+            const modelLocationNames = Array.from(modelLocIds)
+                .map(id => locMap[id])
+                .filter(Boolean);
 
             return {
                 ...m,
                 Manufacturer: manufacturer,
+                locations: modelLocationNames,
                 _count: {
                     assets: assetCount
                 }

@@ -36,6 +36,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     const [filterCategory, setFilterCategory] = useState("All");
     const [filterManufacturer, setFilterManufacturer] = useState("All");
     const [filterStatus, setFilterStatus] = useState("All");
+    const [filterLocation, setFilterLocation] = useState("All");
     const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
@@ -76,6 +77,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     // --- Derived Data for Filters ---
     const categories = Array.from(new Set(models.map(m => m.Category))).filter(Boolean).sort() as string[];
     const manufacturerNames = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort() as string[];
+    const storageLocations = Array.from(new Set(models.flatMap(m => m.locations || []))).filter(Boolean).sort() as string[];
 
     // --- Apply Filters ---
     const filteredModels = models.filter(m => {
@@ -95,6 +97,9 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
         // Manufacturer Filter
         if (filterManufacturer !== "All" && m.Manufacturer?.Name !== filterManufacturer) return false;
 
+        // Location Filter
+        if (filterLocation !== "All" && !(m.locations || []).includes(filterLocation)) return false;
+
         // Status Filter
         if (filterStatus === "In Stock" && (m.AvailableStock || 0) <= 0) return false;
         if (filterStatus === "Out of Stock" && (m.AvailableStock || 0) > 0) return false;
@@ -103,12 +108,13 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
         return true;
     });
 
-    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0);
+    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterLocation !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0);
 
     function clearFilters() {
         setSearchQuery("");
         setFilterCategory("All");
         setFilterManufacturer("All");
+        setFilterLocation("All");
         setFilterStatus("All");
     }
 
@@ -213,6 +219,21 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             </select>
                         </div>
 
+                        {/* Location Filter */}
+                        {storageLocations.length > 0 && (
+                            <div className="flex-1 min-w-[150px]">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Storage Location</label>
+                                <select
+                                    value={filterLocation}
+                                    onChange={(e) => setFilterLocation(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="All">All Locations</option>
+                                    {storageLocations.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                            </div>
+                        )}
+
                         {/* Clear All */}
                         {(searchQuery || activeFilterCount > 0) && (
                             <div className="flex items-end">
@@ -237,9 +258,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <th className="h-12 px-4 align-middle font-medium">Series</th>
                             <th className="h-12 px-4 align-middle font-medium">Manufacturer</th>
                             <th className="h-12 px-4 align-middle font-medium">Category</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Total Stock</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Available</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Assigned</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center">Stock</th>
                             <th className="h-12 px-4 align-middle font-medium text-center">Status</th>
                             <th className="h-12 px-4 align-middle font-medium text-center">Runway</th>
                             <th className="h-12 px-4 align-middle font-medium">Active Devices</th>
@@ -249,13 +268,13 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                     <tbody>
                         {models.length === 0 ? (
                             <tr>
-                                <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                                <td colSpan={9} className="p-4 text-center text-muted-foreground">
                                     No models found. Create one to get started.
                                 </td>
                             </tr>
                         ) : filteredModels.length === 0 ? (
                             <tr>
-                                <td colSpan={11} className="p-10 text-center text-gray-500">
+                                <td colSpan={9} className="p-10 text-center text-gray-500">
                                     <div className="flex flex-col items-center justify-center space-y-3">
                                         <Search className="h-8 w-8 text-gray-300" />
                                         <p>No models match your search filters.</p>
@@ -289,18 +308,14 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className="font-semibold text-gray-900">{m.TotalStock || 0}</span>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <span className={`font-semibold px-2 py-0.5 rounded ${(m.AvailableStock || 0) <= 0
-                                            ? "bg-red-100 text-red-700 border border-red-200"
-                                            : "text-green-600"
-                                            }`}>
-                                            {m.AvailableStock || 0}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <span className="font-semibold text-blue-600">{m.AssignedStock || 0}</span>
+                                        <div className="flex flex-col items-center justify-center">
+                                            <span className={`text-lg font-bold ${(m.AvailableStock || 0) <= 0 ? "text-red-500" : "text-gray-900"}`}>
+                                                {m.AvailableStock || 0}
+                                            </span>
+                                            <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                                                {m.AssignedStock || 0} in use
+                                            </span>
+                                        </div>
                                     </td>
                                     {/* ✅ Status badge - Low Stock Alert */}
                                     <td className="p-4 text-center">
