@@ -21,7 +21,7 @@ function getStockStatus(available: number, reorderLevel: number): {
 } {
     if (available <= 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-700 border-red-200', icon: '🔴', tooltip: 'No units available' };
     if (reorderLevel > 0 && available <= reorderLevel) return { label: `Low Stock (${available} left)`, color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🟡', tooltip: `Below reorder level of ${reorderLevel}` };
-    return { label: 'Healthy', color: 'bg-green-100 text-green-700 border-green-200', icon: '🟢', tooltip: 'Stock is sufficient' };
+    return { label: 'Stock OK', color: 'bg-green-100 text-green-700 border-green-200', icon: '🟢', tooltip: 'Stock is sufficient' };
 }
 
 
@@ -260,7 +260,6 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <th className="h-12 px-4 align-middle font-medium">Category</th>
                             <th className="h-12 px-4 align-middle font-medium text-center">Stock</th>
                             <th className="h-12 px-4 align-middle font-medium text-center">Status</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Runway</th>
                             <th className="h-12 px-4 align-middle font-medium">Active Devices</th>
                             <th className="h-12 px-4 align-middle font-medium text-right">Actions</th>
                         </tr>
@@ -268,13 +267,13 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                     <tbody>
                         {models.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="p-4 text-center text-muted-foreground">
+                                <td colSpan={8} className="p-4 text-center text-muted-foreground">
                                     No models found. Create one to get started.
                                 </td>
                             </tr>
                         ) : filteredModels.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="p-10 text-center text-gray-500">
+                                <td colSpan={8} className="p-10 text-center text-gray-500">
                                     <div className="flex flex-col items-center justify-center space-y-3">
                                         <Search className="h-8 w-8 text-gray-300" />
                                         <p>No models match your search filters.</p>
@@ -339,39 +338,15 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                             )}
                                         </div>
                                     </td>
-                                    {/* ✅ Runway Forecast column */}
-                                    <td className="p-4 text-center">
-                                        {(() => {
-                                            const forecast = forecastData.find(f => f.modelId === m.ModelID);
-                                            if (!forecast || forecast.estimated_days_left === null) {
-                                                return <span className="text-[10px] text-gray-400 font-medium italic">No usage data</span>;
-                                            }
-
-                                            const days = forecast.estimated_days_left;
-                                            const runwayStatus = days < 5 ? { label: "Reorder Now", color: "text-red-600 bg-red-50 border-red-200" } :
-                                                days < 14 ? { label: "Refill Soon", color: "text-orange-600 bg-orange-50 border-orange-200" } :
-                                                    { label: "Healthy", color: "text-green-600 bg-green-50 border-green-200" };
-
-                                            return (
-                                                <div className="flex flex-col items-center gap-1 min-w-[100px]">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${runwayStatus.color}`}>
-                                                        {runwayStatus.label} ({days}d)
-                                                    </span>
-                                                    {/* Visual bar */}
-                                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-100">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-500 ${days < 5 ? 'bg-red-500' : days < 14 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                                            style={{ width: `${Math.min(100, (days / 30) * 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </td>
                                     <td className="p-4">
-                                        <span className="text-xs font-medium text-gray-500">
-                                            {m._count.assets} instances
-                                        </span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold text-gray-900">
+                                                Used by
+                                            </span>
+                                            <span className="text-xs font-medium text-gray-500">
+                                                {m._count.assets} devices
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="p-4 text-right flex justify-end gap-2 items-center">
                                         <Link
