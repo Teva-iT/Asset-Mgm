@@ -38,47 +38,32 @@ export default function NavBar({ user }: { user?: any }) {
         { name: 'Reports', href: '/reports' },
     ]
 
-    const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-    const navRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (navRef.current && !navRef.current.contains(event.target as Node)) {
-                setOpenDropdown(null)
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [])
 
     if (pathname === '/login' || !user) return null
 
     return (
         <>
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-2 xl:gap-6" ref={navRef}>
+            <div className="hidden lg:flex items-center gap-2 xl:gap-6">
                 {links.map(link => {
                     const hasSubItems = link.subItems && link.subItems.length > 0;
                     const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)) || (hasSubItems && link.subItems!.some(sub => pathname.startsWith(sub.href)))
 
                     if (hasSubItems) {
                         return (
-                            <div key={link.name} className="relative group">
+                            <div key={link.name} className="relative group py-2">
                                 <button
-                                    onClick={() => setOpenDropdown(openDropdown === link.name ? null : link.name)}
                                     className={`
                                         flex items-center gap-1 text-sm font-semibold transition-colors duration-100 px-3 py-2 rounded-md
-                                        ${isActive || openDropdown === link.name
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                                        ${isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 group-hover:text-black group-hover:bg-gray-100'}
                                     `}
                                 >
                                     {link.name}
-                                    <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === link.name ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
                                 </button>
 
-                                {openDropdown === link.name && (
-                                    <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95">
+                                <div className="absolute left-0 top-full pt-1 w-48 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-150 z-50">
+                                    <div className="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 overflow-hidden">
                                         <div className="py-1">
                                             {link.subItems!.map(sub => {
                                                 const isSubActive = pathname.startsWith(sub.href)
@@ -86,8 +71,7 @@ export default function NavBar({ user }: { user?: any }) {
                                                     <Link
                                                         key={sub.name}
                                                         href={sub.href}
-                                                        onClick={() => setOpenDropdown(null)}
-                                                        className={`block px-4 py-2 text-sm ${isSubActive ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
+                                                        className={`block px-4 py-2 text-sm ${isSubActive ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                                                     >
                                                         {sub.name}
                                                     </Link>
@@ -95,7 +79,7 @@ export default function NavBar({ user }: { user?: any }) {
                                             })}
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         )
                     }
