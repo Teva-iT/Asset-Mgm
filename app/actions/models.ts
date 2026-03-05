@@ -240,10 +240,11 @@ export async function adjustStockAction(formData: FormData) {
     const currentStockStr = formData.get("currentStock")?.toString();
     const newStockStr = formData.get("newStock")?.toString();
     const differenceStr = formData.get("difference")?.toString();
+    const storageLocationId = formData.get("storageLocationId")?.toString();
     const reason = formData.get("reason")?.toString() || "adjustment";
     const notes = formData.get("notes")?.toString() || null;
 
-    if (!modelId || newStockStr === undefined || differenceStr === undefined) {
+    if (!modelId || newStockStr === undefined || differenceStr === undefined || !storageLocationId) {
         return { success: false, error: "Missing required fields" };
     }
 
@@ -288,6 +289,7 @@ export async function adjustStockAction(formData: FormData) {
             ModelID: modelId,
             Quantity: difference,
             ActionType: "ADJUST",
+            StorageLocationID: storageLocationId,
             Notes: `Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
             CreatedAt: new Date().toISOString()
         });

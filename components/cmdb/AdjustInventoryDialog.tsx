@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X, MapPin } from "lucide-react";
 import { adjustStockAction } from "@/app/actions/models";
+import StorageLocationSelect from "@/components/StorageLocationSelect";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const REASONS = [
     { value: "correction", label: "Correction / Counting Error" },
@@ -19,16 +21,35 @@ export default function AdjustInventoryDialog({ model }: { model: any }) {
     const [error, setError] = useState("");
     const [newStock, setNewStock] = useState<number>(model.TotalStock || 0);
 
+    const [locationId, setLocationId] = useState("");
+    const [locationError, setLocationError] = useState("");
+
     const currentStock = model.TotalStock || 0;
     const diff = newStock - currentStock;
     const diffLabel = diff > 0 ? `+${diff}` : `${diff}`;
     const diffColor = diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-gray-400";
 
+    useEscapeKey(() => setOpen(false), open);
+
+    function resetForm() {
+        setNewStock(model.TotalStock || 0);
+        setLocationId("");
+        setLocationError("");
+        setError("");
+    }
+
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
+        setLocationError("");
+
         if (diff === 0) {
             setError("New stock value is the same as current. No change needed.");
+            return;
+        }
+
+        if (!locationId) {
+            setLocationError("Storage Location is required.");
             return;
         }
 
@@ -38,6 +59,7 @@ export default function AdjustInventoryDialog({ model }: { model: any }) {
         formData.set("currentStock", String(currentStock));
         formData.set("newStock", String(newStock));
         formData.set("difference", String(diff));
+        formData.set("storageLocationId", locationId);
 
         try {
             const res = await adjustStockAction(formData);
@@ -57,7 +79,7 @@ export default function AdjustInventoryDialog({ model }: { model: any }) {
     return (
         <>
             <button
-                onClick={() => { setOpen(true); setNewStock(model.TotalStock || 0); setError(""); }}
+                onClick={() => { setOpen(true); resetForm(); }}
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3"
                 title="Adjust Inventory"
             >
@@ -118,6 +140,25 @@ export default function AdjustInventoryDialog({ model }: { model: any }) {
                                     required
                                     className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                                 />
+                            </div>
+
+                            {/* Storage Location */}
+                            <div className="grid gap-1.5">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                    Storage Location (Warehouse / Room) <span className="text-red-500">*</span>
+                                </label>
+                                <StorageLocationSelect
+                                    value={locationId}
+                                    onChange={(val) => {
+                                        setLocationId(val);
+                                        if (val) setLocationError("");
+                                    }}
+                                    error={locationError}
+                                />
+                                {locationError && (
+                                    <p className="text-red-500 text-xs">{locationError}</p>
+                                )}
                             </div>
 
                             {/* Reason */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { History, X, Plus, Minus, RefreshCw, Search, Filter, ChevronDown } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const ACTION_META: Record<string, { color: string; label: string; icon: any }> = {
     ADD: { icon: Plus, color: "text-green-700 bg-green-50 border-green-200", label: "Purchase" },
@@ -24,6 +25,8 @@ export default function StockHistoryDialog({ model }: { model: any }) {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [showFilters, setShowFilters] = useState(false);
+
+    useEscapeKey(() => setOpen(false), open);
 
     // ─── Load records ────────────────────────────────
     useEffect(() => {
@@ -123,8 +126,8 @@ export default function StockHistoryDialog({ model }: { model: any }) {
                             <button
                                 onClick={() => setShowFilters(v => !v)}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${activeFilterCount > 0
-                                        ? "bg-blue-50 text-blue-700 border-blue-300"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    ? "bg-blue-50 text-blue-700 border-blue-300"
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                                     }`}
                             >
                                 <Filter className="h-3.5 w-3.5" />

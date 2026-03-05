@@ -5,10 +5,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Box, Layers, Tag, X, GitBranch } from "lucide-react";
 import { createModelAction } from "@/app/actions/models";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function CreateModelDialog({ manufacturers }: { manufacturers: { ManufacturerID: string, Name: string }[] }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
+
+    useEscapeKey(() => setOpen(false), open);
 
     async function handleSubmit(formData: FormData) {
         const res = await createModelAction(formData);

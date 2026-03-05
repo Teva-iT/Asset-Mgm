@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Edit2, Box, Layers, Tag, X, GitBranch, Bell } from "lucide-react";
 import { updateModelAction } from "@/app/actions/models";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function EditModelDialog({
     model,
@@ -14,6 +15,8 @@ export default function EditModelDialog({
 }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
+
+    useEscapeKey(() => setOpen(false), open);
 
     async function handleSubmit(formData: FormData) {
         const res = await updateModelAction(model.ModelID, formData);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, PackagePlus, Calendar, Box, StickyNote, X, MapPin } from "lucide-react";
 import { addStockAction } from "@/app/actions/models";
 import StorageLocationSelect from "@/components/StorageLocationSelect";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function AddStockDialog({
     model,
@@ -23,6 +24,11 @@ export default function AddStockDialog({
     // ✅ Controlled state for Storage Location
     const [locationId, setLocationId] = useState("");
     const [locationError, setLocationError] = useState("");
+
+    useEscapeKey(() => {
+        setOpen(false);
+        resetForm();
+    }, open);
 
     function resetForm() {
         setLocationId("");
