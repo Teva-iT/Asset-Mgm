@@ -37,6 +37,25 @@ export default function AssignAssetWizardPage() {
         }
     }, [searchParams, selectedEmployee])
 
+    // Check for pre-selected model stock
+    useEffect(() => {
+        const modelId = searchParams.get('modelId')
+        if (modelId && !selectedAsset) {
+            // Fetch available assets for this model
+            fetch(`/api/assets?modelId=${modelId}&status=Available`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        // Pre-select the first available one
+                        setSelectedAsset(data[0])
+                    } else if (data && data.length === 0) {
+                        setError('No available units found for this model.')
+                    }
+                })
+                .catch(err => console.error('Failed to pre-select asset', err))
+        }
+    }, [searchParams, selectedAsset])
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!selectedEmployee || !selectedAsset) {

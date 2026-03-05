@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import InventoryScanner from '@/components/InventoryScanner'
 import AssetImporter from '@/components/inventory/AssetImporter'
+import Link from 'next/link'
+import LowStockDashboard from '@/components/inventory/LowStockDashboard'
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic'
@@ -21,31 +23,18 @@ async function getInventoryData() {
 export default async function InventoryPage() {
     const assets = await getInventoryData()
 
+    // --- Summary calculations move to page body or keep as is ---
+
     // --- Calculate Summary Stats ---
     const totalAssets = assets.length
-
-    // Logic Refinement:
-    // Brand New (Unboxed): Condition = "New (Unboxed)" AND Not Assigned (implied by this list)
+    // ... (rest of stats calculation)
     const brandNew = assets.filter(a => a.Condition === 'New (Unboxed)').length
-
-    // New & Ready: Condition = "New (Unboxed)" AND OperationalState = "Imaged (Ready)"
-    // (Note: Usually "New (Unboxed)" implies not imaged yet, but if you have a workflow where it's unboxed just for imaging then re-boxed?? 
-    // Actually, "New & Ready" might mean "New (Unboxed)" OR "Used (Good)"? 
-    // User said: "New & Ready: Condition = New AND OperationalState = Imaged (Ready)"
     const newAndReady = assets.filter(a => a.Condition === 'New (Unboxed)' && a.OperationalState === 'Imaged (Ready)').length
-
-    // Re-imaged Ready: Condition = "Used (Good)" AND OperationalState = "Imaged (Ready)"
     const reimagedReady = assets.filter(a =>
-        (a.Condition === 'Used (Good)' || a.Condition === 'Re-imaged') // Handle legacy 'Re-imaged' condition if exists
+        (a.Condition === 'Used (Good)' || a.Condition === 'Re-imaged')
         && a.OperationalState === 'Imaged (Ready)'
     ).length
-
-    // Not Ready: OperationalState != 'Imaged (Ready)'
     const notReady = assets.filter(a => a.OperationalState !== 'Imaged (Ready)').length
-
-    // Accessories (Simple count for now)
-    const accessoryTypes = ['Mouse', 'Keyboard', 'Headset', 'Docking Station', 'Charger']
-    const accessoriesCount = assets.filter(a => accessoryTypes.includes(a.AssetType || '')).length
 
     // --- Group by Category ---
     const categoryGroups: Record<string, typeof assets> = {}
@@ -57,7 +46,6 @@ export default async function InventoryPage() {
         categoryGroups[type].push(asset)
     })
 
-    // Sort categories alphabetically
     const sortedCategories = Object.keys(categoryGroups).sort()
 
     return (
@@ -84,13 +72,10 @@ export default async function InventoryPage() {
                 <SummaryCard title="New & Ready" count={newAndReady} icon="check-circle" color="green" />
                 <SummaryCard title="Re-imaged Ready" count={reimagedReady} icon="refresh-cw" color="indigo" />
                 <SummaryCard title="Not Ready" count={notReady} icon="alert-circle" color="amber" />
-                {/* <SummaryCard title="Accessories" count={accessoriesCount} icon="headphones" color="gray" /> */}
-                {/* 5 columns max grid, removed accessories for now or need 6 columns? 
-                    User asked for "Total, Ready, New, Re-imaged"... 
-                    Let's stick to the 5 key ones for Lifecycle.
-                    If Accessories is critical, we can make it grid-cols-6 or separate row.
-                */}
             </div>
+
+            {/* 1. Low Stock Dashboard (Client Component) */}
+            <LowStockDashboard />
 
             {/* 2. Inventory by Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

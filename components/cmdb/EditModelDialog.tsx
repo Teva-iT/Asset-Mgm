@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Edit2, Box, Layers, Tag, X, GitBranch } from "lucide-react";
+import { Edit2, Box, Layers, Tag, X, GitBranch, Bell } from "lucide-react";
 import { updateModelAction } from "@/app/actions/models";
 
 export default function EditModelDialog({
@@ -135,6 +135,21 @@ export default function EditModelDialog({
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Inventory Alert */}
+                            <div className="grid gap-1.5 pt-2 border-t border-gray-100">
+                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <Bell className="h-3.5 w-3.5 text-orange-400" /> Reorder Level (Low Stock Alert)
+                                </label>
+                                <input
+                                    name="reorderLevel"
+                                    type="number"
+                                    min="0"
+                                    defaultValue={model.ReorderLevel || 0}
+                                    className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                                />
+                                <p className="text-xs text-gray-400">Alert will trigger when Available Stock ≤ this number. Set to 0 to disable.</p>
                             </div>
 
                             {/* Actions */}

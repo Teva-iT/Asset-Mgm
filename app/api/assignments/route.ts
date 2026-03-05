@@ -24,15 +24,17 @@ export async function POST(request: Request) {
 
         // --- GUARD: Check AvailableStock before assigning ---
         if (asset.ModelID) {
-            const { data: model } = await supabase
+            const { data: model, error: modelError } = await supabase
                 .from("AssetModel")
-                .select("AvailableStock, Name")
+                .select("AvailableStock, Name, ReorderLevel")
                 .eq("ModelID", asset.ModelID)
                 .single();
 
-            if (model && model.AvailableStock <= 0) {
+            if (modelError || !model) {
+                console.error("Model fetch error during assignment guard:", modelError);
+            } else if ((model.AvailableStock || 0) <= 0) {
                 return NextResponse.json(
-                    { error: `No available stock remaining for model "${model.Name}". Cannot assign this asset.` },
+                    { error: `Insufficient stock for model "${model.Name}". Available units: ${model.AvailableStock || 0}. Please add stock before assigning.` },
                     { status: 409 }
                 )
             }

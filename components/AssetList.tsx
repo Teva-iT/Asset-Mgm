@@ -197,6 +197,14 @@ export default function AssetList({ initialAssets }: { initialAssets: Asset[] })
                             >
                                 View / Edit
                             </Link>
+                            {asset.Status === 'Available' && (
+                                <Link
+                                    href={`/assets/${asset.AssetID}/assign`}
+                                    className="flex-1 btn btn-primary text-center py-2 text-sm"
+                                >
+                                    Assign
+                                </Link>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -268,6 +276,14 @@ export default function AssetList({ initialAssets }: { initialAssets: Asset[] })
                                         >
                                             View
                                         </Link>
+                                        {asset.Status === 'Available' && (
+                                            <Link
+                                                href={`/assets/${asset.AssetID}/assign`}
+                                                className="text-green-600 hover:text-green-900 hover:underline px-2 py-1 rounded font-medium"
+                                            >
+                                                Assign
+                                            </Link>
+                                        )}
                                         <button
                                             onClick={() => handleDelete(asset.AssetID)}
                                             className="text-red-600 hover:text-red-900 hover:underline px-2 py-1 rounded"

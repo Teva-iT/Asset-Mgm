@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')
     const status = searchParams.get('status')
+    const modelId = searchParams.get('modelId')
 
     try {
         let queryBuilder = supabase
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
 
         if (status) {
             queryBuilder = queryBuilder.eq("Status", status);
+        }
+
+        if (modelId) {
+            queryBuilder = queryBuilder.eq("ModelID", modelId);
         }
 
         if (q) {

@@ -116,6 +116,8 @@ export async function updateModelAction(modelId: string, formData: FormData) {
     const manufacturerId = formData.get("manufacturerId")?.toString();
     const category = formData.get("category")?.toString();
     const series = formData.get("series")?.toString() || null;
+    const reorderLevelStr = formData.get("reorderLevel")?.toString();
+    const reorderLevel = reorderLevelStr ? Math.max(0, parseInt(reorderLevelStr, 10)) : 0;
 
     if (!name || !manufacturerId || !category) {
         return { success: false, error: "Missing required fields" };
@@ -127,6 +129,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
             Series: series,
             ManufacturerID: manufacturerId,
             Category: category,
+            ReorderLevel: reorderLevel,
             updatedAt: new Date().toISOString()
         }).eq('ModelID', modelId);
 
@@ -229,5 +232,70 @@ export async function addStockAction(formData: FormData) {
     } catch (error: any) {
         console.error("Error adding stock:", error);
         return { success: false, error: error.message || "Failed to add stock" };
+    }
+}
+
+export async function adjustStockAction(formData: FormData) {
+    const modelId = formData.get("modelId")?.toString();
+    const currentStockStr = formData.get("currentStock")?.toString();
+    const newStockStr = formData.get("newStock")?.toString();
+    const differenceStr = formData.get("difference")?.toString();
+    const reason = formData.get("reason")?.toString() || "adjustment";
+    const notes = formData.get("notes")?.toString() || null;
+
+    if (!modelId || newStockStr === undefined || differenceStr === undefined) {
+        return { success: false, error: "Missing required fields" };
+    }
+
+    const newStock = parseInt(newStockStr, 10);
+    const difference = parseInt(differenceStr, 10);
+
+    if (isNaN(newStock) || newStock < 0) {
+        return { success: false, error: "Invalid stock value" };
+    }
+
+    if (difference === 0) {
+        return { success: false, error: "No change in stock — nothing to adjust" };
+    }
+
+    try {
+        const { data: model, error: fetchError } = await supabase
+            .from("AssetModel")
+            .select("TotalStock, AvailableStock, AssignedStock")
+            .eq("ModelID", modelId)
+            .single();
+
+        if (fetchError || !model) throw new Error("Model not found");
+
+        const assignedStock = model.AssignedStock || 0;
+        // New available = newTotal - assigned (but not below 0)
+        const newAvailable = Math.max(0, newStock - assignedStock);
+
+        const { error: updateError } = await supabase
+            .from("AssetModel")
+            .update({
+                TotalStock: newStock,
+                AvailableStock: newAvailable,
+                updatedAt: new Date().toISOString()
+            })
+            .eq("ModelID", modelId);
+
+        if (updateError) throw updateError;
+
+        // Log the adjustment
+        await supabase.from("InventoryRecord").insert({
+            RecordID: crypto.randomUUID(),
+            ModelID: modelId,
+            Quantity: difference,
+            ActionType: "ADJUST",
+            Notes: `Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
+            CreatedAt: new Date().toISOString()
+        });
+
+        revalidatePath("/inventory/cmdb/models");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error adjusting stock:", error);
+        return { success: false, error: error.message || "Failed to adjust stock" };
     }
 }
