@@ -14,7 +14,15 @@ const REASONS = [
     { value: "other", label: "Other" },
 ];
 
-export default function AdjustInventoryDialog({ model }: { model: any }) {
+export default function AdjustInventoryDialog({
+    model,
+    triggerLabel = "Adjust",
+    variant = "default"
+}: {
+    model: any,
+    triggerLabel?: string,
+    variant?: "default" | "dropdown"
+}) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,14 +86,24 @@ export default function AdjustInventoryDialog({ model }: { model: any }) {
 
     return (
         <>
-            <button
-                onClick={() => { setOpen(true); resetForm(); }}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3"
-                title="Adjust Inventory"
-            >
-                <SlidersHorizontal className="h-4 w-4 mr-1" />
-                Adjust
-            </button>
+            {variant === "dropdown" ? (
+                <button
+                    onClick={() => { setOpen(true); resetForm(); }}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                    <SlidersHorizontal className="h-4 w-4 text-orange-500" />
+                    {triggerLabel}
+                </button>
+            ) : (
+                <button
+                    onClick={() => { setOpen(true); resetForm(); }}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3"
+                    title="Adjust Inventory"
+                >
+                    <SlidersHorizontal className="h-4 w-4 mr-1" />
+                    Adjust
+                </button>
+            )}
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

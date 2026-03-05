@@ -13,7 +13,15 @@ const ACTION_META: Record<string, { color: string; label: string; icon: any }> =
 
 const ALL_TYPES = ["ADD", "ASSIGN", "RETURN", "ADJUST"];
 
-export default function StockHistoryDialog({ model }: { model: any }) {
+export default function StockHistoryDialog({
+    model,
+    triggerLabel = "History",
+    variant = "default"
+}: {
+    model: any,
+    triggerLabel?: string,
+    variant?: "default" | "dropdown"
+}) {
     const [open, setOpen] = useState(false);
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -73,14 +81,24 @@ export default function StockHistoryDialog({ model }: { model: any }) {
 
     return (
         <>
-            <button
-                onClick={() => setOpen(true)}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-gray-50 text-gray-600 hover:bg-gray-100 h-8 px-3"
-                title="View Stock History"
-            >
-                <History className="h-4 w-4 mr-1" />
-                History
-            </button>
+            {variant === "dropdown" ? (
+                <button
+                    onClick={() => setOpen(true)}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                    <History className="h-4 w-4 text-blue-500" />
+                    {triggerLabel}
+                </button>
+            ) : (
+                <button
+                    onClick={() => setOpen(true)}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-1.5"
+                    title={triggerLabel}
+                >
+                    <History className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">{triggerLabel}</span>
+                </button>
+            )}
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

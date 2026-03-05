@@ -6,7 +6,7 @@ import { duplicateModel, deleteModel } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
@@ -38,6 +38,22 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     const [filterStatus, setFilterStatus] = useState("All");
     const [filterLocation, setFilterLocation] = useState("All");
     const [showFilters, setShowFilters] = useState(false);
+
+    // --- Actions Dropdown State ---
+    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (!(event.target as Element).closest('.action-dropdown-container')) {
+                setOpenDropdownId(null);
+            }
+        }
+        if (openDropdownId) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [openDropdownId]);
 
     useEffect(() => {
         fetch("/api/inventory/forecast")
@@ -349,9 +365,10 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                         </div>
                                     </td>
                                     <td className="p-4 text-right flex justify-end gap-2 items-center">
+                                        {/* Primary Action Button */}
                                         <Link
                                             href={`/assign?modelId=${m.ModelID}`}
-                                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-8 px-3 gap-1.5 ${(m.AvailableStock || 0) <= 0
+                                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-8 px-4 gap-1.5 min-w-[90px] ${(m.AvailableStock || 0) <= 0
                                                 ? "bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300 opacity-60 grayscale shadow-none"
                                                 : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md"
                                                 }`}
@@ -363,34 +380,62 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                             <UserPlus className="h-4 w-4" />
                                             <span>Assign</span>
                                         </Link>
-                                        <AddStockDialog model={m} />
-                                        <StockHistoryDialog model={m} />
-                                        <AdjustInventoryDialog model={m} />
-                                        <button
-                                            onClick={() => handleClone(m.ModelID)}
-                                            disabled={cloningId === m.ModelID}
-                                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"
-                                            title="Clone Model"
-                                        >
-                                            {cloningId === m.ModelID ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
+
+                                        {/* Manage Dropdown Menu */}
+                                        <div className="relative action-dropdown-container">
+                                            <button
+                                                onClick={() => setOpenDropdownId(openDropdownId === m.ModelID ? null : m.ModelID)}
+                                                className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border shadow-sm h-8 px-3 gap-1.5 ${openDropdownId === m.ModelID
+                                                    ? "bg-gray-100 text-gray-900 border-gray-300"
+                                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                                                    }`}
+                                            >
+                                                <Settings className="h-4 w-4" />
+                                                <span>Manage</span>
+                                                <ChevronDown className={`h-3 w-3 ml-0.5 transition-transform ${openDropdownId === m.ModelID ? "rotate-180" : ""}`} />
+                                            </button>
+
+                                            {/* Dropdown List */}
+                                            {openDropdownId === m.ModelID && (
+                                                <div className="absolute right-0 mt-1 w-56 rounded-xl border border-gray-100 bg-white shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                                    <div className="p-1 space-y-0.5">
+                                                        <AddStockDialog model={m} triggerLabel="Add Stock" variant="dropdown" />
+                                                        <AdjustInventoryDialog model={m} triggerLabel="Correct Stock" variant="dropdown" />
+                                                        <StockHistoryDialog model={m} triggerLabel="View History" variant="dropdown" />
+
+                                                        <div className="h-px bg-gray-100 my-1 mx-2" />
+
+                                                        <EditModelDialog model={m} manufacturers={manufacturers} triggerLabel="Edit" variant="dropdown" />
+
+                                                        <button
+                                                            onClick={() => {
+                                                                handleClone(m.ModelID);
+                                                                setOpenDropdownId(null);
+                                                            }}
+                                                            disabled={cloningId === m.ModelID}
+                                                            className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50"
+                                                        >
+                                                            {cloningId === m.ModelID ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" /> : <Copy className="h-4 w-4 text-gray-400" />}
+                                                            {cloningId === m.ModelID ? "Cloning..." : "Duplicate"}
+                                                        </button>
+
+                                                        <div className="h-px bg-gray-100 my-1 mx-2" />
+
+                                                        <button
+                                                            onClick={() => {
+                                                                handleDelete(m.ModelID, m.Name);
+                                                                setOpenDropdownId(null);
+                                                            }}
+                                                            disabled={deletingId === m.ModelID}
+                                                            className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-red-600 rounded-md hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                                                        >
+                                                            {deletingId === m.ModelID ? <Loader2 className="h-4 w-4 animate-spin text-red-500" /> : <Trash2 className="h-4 w-4 text-red-500" />}
+                                                            {deletingId === m.ModelID ? "Deleting..." : "Delete Model"}
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             )}
-                                        </button>
-                                        <EditModelDialog model={m} manufacturers={manufacturers} />
-                                        <button
-                                            onClick={() => handleDelete(m.ModelID, m.Name)}
-                                            disabled={deletingId === m.ModelID}
-                                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-transparent bg-background text-red-600 hover:bg-red-50 hover:text-red-700 h-8 w-8"
-                                            title="Delete Model"
-                                        >
-                                            {deletingId === m.ModelID ? (
-                                                <Loader2 className="h-4 w-4 animate-spin text-red-600" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))

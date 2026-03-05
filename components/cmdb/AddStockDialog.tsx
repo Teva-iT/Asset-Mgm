@@ -14,7 +14,7 @@ export default function AddStockDialog({
 }: {
     model: any,
     triggerLabel?: string,
-    variant?: "default" | "ghost-red"
+    variant?: "default" | "ghost-red" | "dropdown"
 }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
