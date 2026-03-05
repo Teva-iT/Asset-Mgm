@@ -6,7 +6,7 @@ import { duplicateModel, deleteModel } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
@@ -30,6 +30,13 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     const [cloningId, setCloningId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [forecastData, setForecastData] = useState<any[]>([]);
+
+    // --- Search & Filter State ---
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterCategory, setFilterCategory] = useState("All");
+    const [filterManufacturer, setFilterManufacturer] = useState("All");
+    const [filterStatus, setFilterStatus] = useState("All");
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         fetch("/api/inventory/forecast")
@@ -66,16 +73,160 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
         setDeletingId(null);
     }
 
+    // --- Derived Data for Filters ---
+    const categories = Array.from(new Set(models.map(m => m.Category))).filter(Boolean).sort() as string[];
+    const manufacturerNames = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort() as string[];
+
+    // --- Apply Filters ---
+    const filteredModels = models.filter(m => {
+        // Text Search
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesName = m.Name?.toLowerCase().includes(query);
+            const matchesSeries = m.Series?.toLowerCase().includes(query);
+            const matchesCategory = m.Category?.toLowerCase().includes(query);
+            const matchesManufacturer = m.Manufacturer?.Name?.toLowerCase().includes(query);
+            if (!matchesName && !matchesSeries && !matchesCategory && !matchesManufacturer) return false;
+        }
+
+        // Category Filter
+        if (filterCategory !== "All" && m.Category !== filterCategory) return false;
+
+        // Manufacturer Filter
+        if (filterManufacturer !== "All" && m.Manufacturer?.Name !== filterManufacturer) return false;
+
+        // Status Filter
+        if (filterStatus === "In Stock" && (m.AvailableStock || 0) <= 0) return false;
+        if (filterStatus === "Out of Stock" && (m.AvailableStock || 0) > 0) return false;
+        if (filterStatus === "Low Stock" && (m.AvailableStock || 0) > (m.ReorderLevel || 0)) return false;
+
+        return true;
+    });
+
+    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0);
+
+    function clearFilters() {
+        setSearchQuery("");
+        setFilterCategory("All");
+        setFilterManufacturer("All");
+        setFilterStatus("All");
+    }
+
     return (
         <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Asset Models</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Asset Models</h1>
+                    <p className="text-gray-500 mt-1">
                         Define abstract equipment models (e.g. Dell Latitude 5520).
                     </p>
                 </div>
                 <CreateModelDialog manufacturers={manufacturers} />
+            </div>
+
+            {/* ── Search & Filters Bar ── */}
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                    {/* Search Input */}
+                    <div className="relative flex-1 w-full max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search models, category, manufacturer..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        {/* Filter Toggle */}
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${showFilters || activeFilterCount > 0
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                }`}
+                        >
+                            <Filter className="h-4 w-4" />
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {/* Summary */}
+                        <div className="text-sm text-gray-500 whitespace-nowrap pl-2 border-l border-gray-200">
+                            Showing <span className="font-semibold text-gray-900">{filteredModels.length}</span> of {models.length}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Advanced Filters Panel */}
+                {showFilters && (
+                    <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-4 animate-in fade-in slide-in-from-top-2">
+                        {/* Status Filter */}
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Stock Status</label>
+                            <div className="flex bg-gray-100 p-1 rounded-lg">
+                                {["All", "In Stock", "Out of Stock", "Low Stock"].map((status) => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setFilterStatus(status)}
+                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filterStatus === status
+                                            ? "bg-white text-gray-900 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                                            }`}
+                                    >
+                                        {status}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Category Filter */}
+                        <div className="flex-1 min-w-[150px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="All">All Categories</option>
+                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Manufacturer Filter */}
+                        <div className="flex-1 min-w-[150px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Manufacturer</label>
+                            <select
+                                value={filterManufacturer}
+                                onChange={(e) => setFilterManufacturer(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="All">All Manufacturers</option>
+                                {manufacturerNames.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Clear All */}
+                        {(searchQuery || activeFilterCount > 0) && (
+                            <div className="flex items-end">
+                                <button
+                                    onClick={clearFilters}
+                                    className="h-[38px] px-4 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                >
+                                    <RefreshCcw className="h-4 w-4" />
+                                    Clear
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="rounded-md border">
@@ -98,12 +249,22 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                     <tbody>
                         {models.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                                    No models found.
+                                <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                                    No models found. Create one to get started.
+                                </td>
+                            </tr>
+                        ) : filteredModels.length === 0 ? (
+                            <tr>
+                                <td colSpan={11} className="p-10 text-center text-gray-500">
+                                    <div className="flex flex-col items-center justify-center space-y-3">
+                                        <Search className="h-8 w-8 text-gray-300" />
+                                        <p>No models match your search filters.</p>
+                                        <button onClick={clearFilters} className="text-blue-600 hover:underline text-sm font-medium">Clear all filters</button>
+                                    </div>
                                 </td>
                             </tr>
                         ) : (
-                            models.map((m) => (
+                            filteredModels.map((m) => (
                                 <tr key={m.ModelID} className="border-t hover:bg-muted/50 transition-colors">
                                     <td className="p-4 font-medium">
                                         <Link
