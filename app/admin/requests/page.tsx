@@ -47,7 +47,7 @@ export default function AdminRequestsPage() {
         <div className="container">
             <div className="header mb-6">
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>📥 Asset Requests</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.8rem' }}>📥 Hardware Requests</h1>
                     <p className="text-sm text-gray-500 mt-1">
                         {pending > 0 && <span className="text-orange-600 font-semibold">{pending} pending review · </span>}
                         Admin approval dashboard

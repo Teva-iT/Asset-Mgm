@@ -1957,3 +1957,9 @@ The table `public.AssetType` does not exist in the current database.
 [2026-03-05T21:14:13.318Z] API /api/asset-types called
 [2026-03-05T21:14:13.320Z] Attempting to fetch AssetTypes from DB...
 [2026-03-05T21:14:13.402Z] Fetched 25 types.
+[2026-03-05T21:20:32.362Z] API /api/asset-types called
+[2026-03-05T21:20:32.364Z] Attempting to fetch AssetTypes from DB...
+[2026-03-05T21:20:32.475Z] Fetched 25 types.
+[2026-03-05T21:20:32.547Z] API /api/asset-types called
+[2026-03-05T21:20:32.549Z] Attempting to fetch AssetTypes from DB...
+[2026-03-05T21:20:32.623Z] Fetched 25 types.
