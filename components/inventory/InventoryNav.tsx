@@ -54,6 +54,7 @@ export default function InventoryNav() {
                             <div key={item.name} className="space-y-1">
                                 <Link
                                     href={item.href}
+                                    prefetch={true}
                                     className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive
                                         ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5"
                                         : "text-gray-700 hover:bg-gray-100"
@@ -63,16 +64,17 @@ export default function InventoryNav() {
                                     {item.name}
                                 </Link>
 
-                                {/* Sub-items if active or child active */}
-                                {item.items && (isActive || pathname.startsWith(item.href)) && (
-                                    <div className="ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                                {/* Sub-items always visible */}
+                                {item.items && (
+                                    <div className="ml-9 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                                         {item.items.map(sub => {
                                             const isSubActive = pathname === sub.href;
                                             return (
                                                 <Link
                                                     key={sub.name}
                                                     href={sub.href}
-                                                    className={`block px-2 py-1.5 text-sm rounded ${isSubActive ? "text-blue-700 font-medium bg-blue-50" : "text-gray-600 hover:text-gray-900"
+                                                    prefetch={true}
+                                                    className={`block px-2 py-1.5 text-sm rounded transition-colors ${isSubActive ? "text-blue-700 font-medium bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                                         }`}
                                                 >
                                                     {sub.name}
