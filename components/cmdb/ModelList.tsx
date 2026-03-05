@@ -6,7 +6,7 @@ import { duplicateModel, deleteModel } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings, X } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
@@ -41,6 +41,9 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
 
     // --- Actions Dropdown State ---
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+    // --- Series Details State ---
+    const [viewSeriesId, setViewSeriesId] = useState<string | null>(null);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -279,14 +282,14 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                 <table className="w-full text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground">
                         <tr>
-                            <th className="h-12 px-4 align-middle font-medium">Model Name</th>
-                            <th className="h-12 px-4 align-middle font-medium">Series</th>
-                            <th className="h-12 px-4 align-middle font-medium">Manufacturer</th>
-                            <th className="h-12 px-4 align-middle font-medium">Category</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Stock</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center">Status</th>
-                            <th className="h-12 px-4 align-middle font-medium">Active Devices</th>
-                            <th className="h-12 px-4 align-middle font-medium text-right">Actions</th>
+                            <th className="h-12 px-4 align-middle font-medium w-[25%] min-w-[200px]">Model Name</th>
+                            <th className="h-12 px-4 align-middle font-medium w-[20%] min-w-[150px]">Series</th>
+                            <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Manufacturer</th>
+                            <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Category</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center min-w-[80px]">Stock</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Status</th>
+                            <th className="h-12 px-4 align-middle font-medium min-w-[100px]">Active Devices</th>
+                            <th className="h-12 px-4 align-middle font-medium text-right min-w-[160px]">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -309,18 +312,47 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                         ) : (
                             filteredModels.map((m) => (
                                 <tr key={m.ModelID} className="border-t hover:bg-muted/50 transition-colors">
-                                    <td className="p-4 font-medium">
+                                    <td className="p-4">
                                         <Link
                                             href={`/inventory/cmdb/models/${m.ModelID}`}
-                                            className="flex flex-col hover:text-blue-600 transition-colors group"
+                                            className="flex flex-col group block"
                                         >
-                                            <span className="group-hover:underline">{m.Name}</span>
-                                            {m.ModelNumber && <span className="text-xs text-muted-foreground">{m.ModelNumber}</span>}
+                                            <span className="font-semibold text-blue-600 hover:text-blue-800 transition-colors group-hover:underline">
+                                                {m.Name}
+                                            </span>
+                                            {m.ModelNumber && <span className="text-xs text-muted-foreground mt-0.5">{m.ModelNumber}</span>}
                                         </Link>
                                     </td>
-                                    <td className="p-4">
+                                    <td className="p-4 relative">
                                         {m.Series ? (
-                                            <span className="text-sm text-gray-700">{m.Series}</span>
+                                            <div className="flex items-start gap-1 flex-wrap max-w-[250px]">
+                                                <span className="text-sm text-gray-700 leading-snug">
+                                                    {m.Series.length > 50 ? `${m.Series.substring(0, 50)}... ` : m.Series}
+                                                </span>
+                                                {m.Series.length > 50 && (
+                                                    <button
+                                                        onClick={() => setViewSeriesId(m.ModelID)}
+                                                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+                                                    >
+                                                        [View all]
+                                                    </button>
+                                                )}
+
+                                                {/* Inline Popover for Full Series */}
+                                                {viewSeriesId === m.ModelID && (
+                                                    <div className="absolute top-10 left-4 z-50 w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-4 animate-in fade-in zoom-in-95">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">All Series</h4>
+                                                            <button onClick={() => setViewSeriesId(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 leading-relaxed max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                                            {m.Series}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         ) : (
                                             <span className="text-xs text-muted-foreground">—</span>
                                         )}
