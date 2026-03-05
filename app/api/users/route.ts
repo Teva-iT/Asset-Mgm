@@ -33,9 +33,12 @@ export async function POST(request: Request) {
             Password: hashedPassword,
             Role: role,
             Email: email || null,
+            IsSupportContact: body.isSupportContact || false,
+            SupportRole: body.supportRole || null,
+            AvatarUrl: body.avatarUrl || null,
             CreatedAt: new Date().toISOString(),
             UpdatedAt: new Date().toISOString()
-        }).select("UserID, Username, Role, Email, CreatedAt, UpdatedAt").single();
+        }).select("UserID, Username, Role, Email, IsSupportContact, SupportRole, AvatarUrl, CreatedAt, UpdatedAt").single();
 
         if (insertError) {
             if (insertError.code === '23505') {

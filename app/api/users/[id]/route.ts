@@ -40,6 +40,9 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
             Username: username,
             Role: role,
             Email: email || null,
+            IsSupportContact: body.isSupportContact ?? false,
+            SupportRole: body.supportRole || null,
+            AvatarUrl: body.avatarUrl || null,
             UpdatedAt: new Date().toISOString()
         }
 
@@ -58,7 +61,7 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
             throw updateError;
         }
 
-        const { data: updatedUser } = await supabase.from("User").select("UserID, Username, Role, Email, CreatedAt, UpdatedAt").eq("UserID", params.id).single();
+        const { data: updatedUser } = await supabase.from("User").select("UserID, Username, Role, Email, IsSupportContact, SupportRole, AvatarUrl, CreatedAt, UpdatedAt").eq("UserID", params.id).single();
 
         return NextResponse.json(updatedUser)
 
