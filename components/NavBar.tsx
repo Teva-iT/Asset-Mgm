@@ -11,31 +11,31 @@ export default function NavBar({ user }: { user?: any }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     const links = [
-        { name: 'Home', href: '/' },
-        { name: 'Asset Management', href: '/assets' },
+        { name: 'AD Compare', href: '/admin/ad-group-compare' },
+        { name: 'Admin Users', href: '/admin/users' },
         {
             name: 'Agreements', href: '#', subItems: [
-                { name: 'Warranties', href: '/warranties' },
-                { name: 'Licenses', href: '/licenses' }
+                { name: 'Licenses', href: '/licenses' },
+                { name: 'Warranties', href: '/warranties' }
             ]
         },
-        {
-            name: 'Service Requests', href: '#', subItems: [
-                { name: 'Hardware Requests', href: '/admin/requests' },
-                { name: 'Access Requests', href: '/access-requests' }
-            ]
-        },
-        { name: 'IT Inventory', href: '/inventory' },
-        { name: 'Employees', href: '/employees' },
+        { name: 'Asset Management', href: '/assets' },
         {
             name: 'Employee Lifecycle', href: '#', subItems: [
-                { name: 'Onboarding', href: '/onboarding' },
-                { name: 'Offboarding', href: '/offboarding/checklists' }
+                { name: 'Offboarding', href: '/offboarding/checklists' },
+                { name: 'Onboarding', href: '/onboarding' }
             ]
         },
-        { name: 'Admin Users', href: '/admin/users' },
-        { name: 'AD Compare', href: '/admin/ad-group-compare' },
+        { name: 'Employees', href: '/employees' },
+        { name: 'Home', href: '/' },
+        { name: 'IT Inventory', href: '/inventory' },
         { name: 'Reports', href: '/reports' },
+        {
+            name: 'Service Requests', href: '#', subItems: [
+                { name: 'Access Requests', href: '/access-requests' },
+                { name: 'Hardware Requests', href: '/admin/requests' }
+            ]
+        },
     ]
 
 
