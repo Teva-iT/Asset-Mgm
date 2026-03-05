@@ -91,7 +91,16 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     }
 
     // --- Derived Data for Filters ---
-    const categories = Array.from(new Set(models.map(m => m.Category))).filter(Boolean).sort() as string[];
+    const categories = [
+        { value: "Laptop", label: "Laptop" },
+        { value: "Desktop", label: "Desktop" },
+        { value: "Monitor", label: "Monitor" },
+        { value: "Printer", label: "Printer" },
+        { value: "Consumable", label: "Consumable (Toner/Ink)" },
+        { value: "Mobile", label: "Mobile Phone" },
+        { value: "Tablet", label: "Tablet" },
+        { value: "Accessory", label: "Accessory" },
+    ];
     const manufacturerNames = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort() as string[];
     const storageLocations = Array.from(new Set(models.flatMap(m => m.locations || []))).filter(Boolean).sort() as string[];
 
@@ -215,10 +224,10 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <select
                                 value={filterCategory}
                                 onChange={(e) => setFilterCategory(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                             >
                                 <option value="All">All Categories</option>
-                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                             </select>
                         </div>
 
