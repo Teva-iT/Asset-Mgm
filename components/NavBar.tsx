@@ -11,6 +11,7 @@ export default function NavBar({ user }: { user?: any }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     const links = [
+        { name: 'Home', href: '/' },
         { name: 'AD Compare', href: '/admin/ad-group-compare' },
         { name: 'Admin Users', href: '/admin/users' },
         {
@@ -27,7 +28,6 @@ export default function NavBar({ user }: { user?: any }) {
             ]
         },
         { name: 'Employees', href: '/employees' },
-        { name: 'Home', href: '/' },
         { name: 'IT Inventory', href: '/inventory' },
         { name: 'Reports', href: '/reports' },
         {

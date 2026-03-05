@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import './globals.css'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
@@ -25,8 +26,10 @@ export default async function RootLayout({
                 <nav className="bg-white border-b border-gray-200 px-4 md:px-6 h-16 flex items-center justify-between sticky top-0 z-50 shadow-sm relative">
                     {/* Left: Logo */}
                     <div className="flex-shrink-0 flex items-center gap-2">
-                        <img src="/logo.jpg" alt="Logo" className="h-8 w-auto object-contain" />
-                        <span className="font-bold text-gray-800 md:hidden lg:block hidden">AssetMgr</span>
+                        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <img src="/logo.jpg" alt="Logo" className="h-8 w-auto object-contain" />
+                            <span className="font-bold text-gray-800 md:hidden lg:block hidden">AssetMgr</span>
+                        </Link>
                     </div>
 
                     {/* Center: Navigation */}
