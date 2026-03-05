@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Factory, Globe, Mail, Phone, X } from "lucide-react";
+import { Plus, Factory, Globe, X } from "lucide-react";
 import { createManufacturer } from "@/app/actions/manufacturer";
 
 export default function CreateManufacturerDialog() {
@@ -100,39 +99,8 @@ export default function CreateManufacturerDialog() {
                                 </div>
                             </div>
 
-                            {/* Visual Separator */}
-                            <div className="border-t border-gray-100"></div>
-
-                            {/* Section 2: Support */}
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Support Contact</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-1.5">
-                                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <Mail className="h-3.5 w-3.5 text-gray-400" /> Support Email
-                                        </label>
-                                        <input
-                                            name="supportEmail"
-                                            type="email"
-                                            placeholder="support@example.com"
-                                            className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-300"
-                                        />
-                                    </div>
-                                    <div className="grid gap-1.5">
-                                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                            <Phone className="h-3.5 w-3.5 text-gray-400" /> Support Phone
-                                        </label>
-                                        <input
-                                            name="supportPhone"
-                                            placeholder="+1 (555) 000-0000"
-                                            className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-300"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* CTA Actions */}
-                            <div className="flex justify-end items-center gap-3 pt-2">
+                            <div className="flex justify-end items-center gap-3 pt-6 border-t border-gray-100 mt-6">
                                 <button
                                     type="button"
                                     onClick={() => setOpen(false)}

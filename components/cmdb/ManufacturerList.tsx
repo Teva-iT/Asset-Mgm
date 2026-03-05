@@ -24,7 +24,6 @@ export default function ManufacturerList({ manufacturers }: { manufacturers: any
                         <tr>
                             <th className="h-12 px-4 align-middle font-semibold text-gray-600">Name</th>
                             <th className="h-12 px-4 align-middle font-semibold text-gray-600">Website</th>
-                            <th className="h-12 px-4 align-middle font-semibold text-gray-600">Support</th>
                             <th className="h-12 px-4 align-middle font-semibold text-gray-600">Models</th>
                             <th className="h-12 px-4 align-middle font-semibold text-gray-600 text-right">Actions</th>
                         </tr>
@@ -46,13 +45,6 @@ export default function ManufacturerList({ manufacturers }: { manufacturers: any
                                                 {m.Website.replace(/^https?:\/\//, '')}
                                             </a>
                                         ) : <span className="text-gray-300">-</span>}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex flex-col text-xs space-y-1 text-gray-600">
-                                            {m.SupportEmail && <span className="flex items-center gap-1">📧 {m.SupportEmail}</span>}
-                                            {m.SupportPhone && <span className="flex items-center gap-1">📞 {m.SupportPhone}</span>}
-                                            {!m.SupportEmail && !m.SupportPhone && <span className="text-gray-300">-</span>}
-                                        </div>
                                     </td>
                                     <td className="p-4">
                                         <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
