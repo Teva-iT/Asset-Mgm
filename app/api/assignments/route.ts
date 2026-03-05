@@ -6,20 +6,74 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { AssetID, EmployeeID, ExpectedReturnDate, Notes } = body
 
-        // 1. Validate Asset Availability & Employee Status
-        const { data: asset, error: assetError } = await supabase.from("Asset").select("*").eq("AssetID", AssetID).single();
-        if (assetError || !asset || asset.Status !== 'Available') {
-            throw new Error('Asset is not available')
+        // 1. Validate inputs
+        if (!AssetID || !EmployeeID) {
+            return NextResponse.json({ error: 'AssetID and EmployeeID are required' }, { status: 400 })
         }
 
+        // 2. Validate Asset
+        const { data: asset, error: assetError } = await supabase.from("Asset").select("*").eq("AssetID", AssetID).single();
+        if (assetError || !asset) throw new Error('Asset not found')
+        if (asset.Status !== 'Available') throw new Error('Asset is not available for assignment')
+
+        // 3. Validate Employee
         const { data: employee, error: empError } = await supabase.from("Employee").select("*").eq("EmployeeID", EmployeeID).single();
         if (empError || !employee || employee.Status !== 'Active') {
-            throw new Error(`Cannot assign assets to employee with status: ${employee?.Status}. Asset assignment is restricted to Active employees.`)
+            throw new Error(`Cannot assign to employee with status: ${employee?.Status || 'unknown'}`)
+        }
+
+        // --- GUARD: Check AvailableStock before assigning ---
+        if (asset.ModelID) {
+            const { data: model } = await supabase
+                .from("AssetModel")
+                .select("AvailableStock, Name")
+                .eq("ModelID", asset.ModelID)
+                .single();
+
+            if (model && model.AvailableStock <= 0) {
+                return NextResponse.json(
+                    { error: `No available stock remaining for model "${model.Name}". Cannot assign this asset.` },
+                    { status: 409 }
+                )
+            }
         }
 
         const newAssignmentId = crypto.randomUUID();
 
-        // 2. Create Assignment
+        // 4. Try atomic RPC first (requires the SQL function to be created in Supabase)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('assign_asset_atomic', {
+            p_assignment_id: newAssignmentId,
+            p_asset_id: AssetID,
+            p_employee_id: EmployeeID,
+            p_expected_return_date: ExpectedReturnDate ? new Date(ExpectedReturnDate).toISOString() : null,
+            p_notes: Notes || null,
+            p_assigned_by_user_id: null
+        })
+
+        // If RPC succeeded
+        if (!rpcError && rpcResult?.success === true) {
+            const { data: assignment } = await supabase.from("Assignment").select("*").eq("AssignmentID", newAssignmentId).single();
+            // Log stock movement
+            if (asset.ModelID) {
+                await supabase.from("InventoryRecord").insert({
+                    RecordID: crypto.randomUUID(),
+                    ModelID: asset.ModelID,
+                    Quantity: -1,
+                    ActionType: 'ASSIGN',
+                    Notes: `Assigned to employee ${EmployeeID} (Assignment: ${newAssignmentId})`,
+                    CreatedAt: new Date().toISOString()
+                })
+            }
+            return NextResponse.json(assignment, { status: 201 })
+        }
+
+        if (rpcResult?.success === false) {
+            return NextResponse.json({ error: rpcResult.error }, { status: 409 })
+        }
+
+        // 5. Fallback: sequential (if RPC function not yet created)
+        console.warn("RPC assign_asset_atomic not available, falling back to sequential:", rpcError?.message)
+
         const { error: assignError } = await supabase.from("Assignment").insert({
             AssignmentID: newAssignmentId,
             AssetID,
@@ -28,16 +82,33 @@ export async function POST(request: Request) {
             Notes,
             Status: 'Active',
             updatedAt: new Date().toISOString()
-        });
+        })
+        if (assignError) throw assignError
 
-        if (assignError) throw assignError;
+        await supabase.from("Asset").update({ Status: 'Assigned' }).eq("AssetID", AssetID)
 
-        // 3. Update Asset Status
-        await supabase.from("Asset").update({ Status: 'Assigned' }).eq("AssetID", AssetID);
+        if (asset.ModelID) {
+            const { data: model } = await supabase.from("AssetModel").select("AvailableStock, AssignedStock").eq("ModelID", asset.ModelID).single();
+            if (model) {
+                await supabase.from("AssetModel").update({
+                    AvailableStock: Math.max(0, (model.AvailableStock || 0) - 1),
+                    AssignedStock: (model.AssignedStock || 0) + 1
+                }).eq("ModelID", asset.ModelID)
+                // Log stock movement
+                await supabase.from("InventoryRecord").insert({
+                    RecordID: crypto.randomUUID(),
+                    ModelID: asset.ModelID,
+                    Quantity: -1,
+                    ActionType: 'ASSIGN',
+                    Notes: `Assigned to employee ${EmployeeID} (Assignment: ${newAssignmentId})`,
+                    CreatedAt: new Date().toISOString()
+                })
+            }
+        }
 
         const { data: assignment } = await supabase.from("Assignment").select("*").eq("AssignmentID", newAssignmentId).single();
-
         return NextResponse.json(assignment, { status: 201 })
+
     } catch (error: any) {
         console.error('Error creating assignment:', error)
         return NextResponse.json(

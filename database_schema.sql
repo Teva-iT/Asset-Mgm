@@ -138,6 +138,9 @@ CREATE TABLE "AssetModel" (
   "Description" TEXT,
   "ImageURL" TEXT,
   "EOLDate" TIMESTAMP(3),
+  "TotalStock" INTEGER NOT NULL DEFAULT 0,
+  "AvailableStock" INTEGER NOT NULL DEFAULT 0,
+  "AssignedStock" INTEGER NOT NULL DEFAULT 0,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   FOREIGN KEY ("ManufacturerID") REFERENCES "Manufacturer"("ManufacturerID")
@@ -191,4 +194,18 @@ CREATE TABLE "ProcurementItem" (
   "Quantity" INTEGER NOT NULL,
   "UnitPrice" DECIMAL,
   FOREIGN KEY ("RequestID") REFERENCES "ProcurementRequest"("RequestID")
+);
+
+CREATE TABLE "InventoryRecord" (
+  "RecordID" TEXT NOT NULL PRIMARY KEY,
+  "ModelID" TEXT NOT NULL,
+  "Quantity" INTEGER NOT NULL,
+  "ActionType" TEXT NOT NULL DEFAULT 'ADD',
+  "PurchaseDate" TIMESTAMP(3),
+  "StorageLocationID" TEXT,
+  "Notes" TEXT,
+  "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "CreatedByUserID" TEXT,
+  FOREIGN KEY ("ModelID") REFERENCES "AssetModel"("ModelID"),
+  FOREIGN KEY ("CreatedByUserID") REFERENCES "User"("UserID")
 );

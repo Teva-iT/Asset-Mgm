@@ -4,9 +4,10 @@
 import { useState } from "react";
 import { duplicateModel, deleteModel } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
-import { Copy, Loader2, Trash2 } from "lucide-react";
+import { Copy, Loader2, Trash2, Package } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
+import AddStockDialog from "./AddStockDialog";
 
 export default function ModelList({ models, manufacturers }: { models: any[], manufacturers: any[] }) {
     const router = useRouter();
@@ -59,7 +60,10 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <th className="h-12 px-4 align-middle font-medium">Series</th>
                             <th className="h-12 px-4 align-middle font-medium">Manufacturer</th>
                             <th className="h-12 px-4 align-middle font-medium">Category</th>
-                            <th className="h-12 px-4 align-middle font-medium">Active Assets</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center">Total Stock</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center">Available</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center">Assigned</th>
+                            <th className="h-12 px-4 align-middle font-medium">Active Devices</th>
                             <th className="h-12 px-4 align-middle font-medium text-right">Actions</th>
                         </tr>
                     </thead>
@@ -92,12 +96,22 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                             {m.Category}
                                         </span>
                                     </td>
+                                    <td className="p-4 text-center">
+                                        <span className="font-semibold text-gray-900">{m.TotalStock || 0}</span>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <span className="font-semibold text-green-600">{m.AvailableStock || 0}</span>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <span className="font-semibold text-blue-600">{m.AssignedStock || 0}</span>
+                                    </td>
                                     <td className="p-4">
-                                        <span className="text-xs font-medium">
+                                        <span className="text-xs font-medium text-gray-500">
                                             {m._count.assets} instances
                                         </span>
                                     </td>
-                                    <td className="p-4 text-right flex justify-end gap-2">
+                                    <td className="p-4 text-right flex justify-end gap-2 items-center">
+                                        <AddStockDialog model={m} />
                                         <button
                                             onClick={() => handleClone(m.ModelID)}
                                             disabled={cloningId === m.ModelID}

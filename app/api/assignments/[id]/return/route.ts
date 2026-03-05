@@ -31,6 +31,26 @@ export async function PUT(
         // 3. Update Asset Status
         await supabase.from("Asset").update({ Status: 'Available' }).eq("AssetID", assignment.AssetID);
 
+        const assetModelID = assignment.Asset?.ModelID;
+        if (assetModelID) {
+            const { data: model } = await supabase.from("AssetModel").select("AvailableStock, AssignedStock").eq("ModelID", assetModelID).single();
+            if (model) {
+                await supabase.from("AssetModel").update({
+                    AvailableStock: (model.AvailableStock || 0) + 1,
+                    AssignedStock: Math.max(0, (model.AssignedStock || 0) - 1)
+                }).eq("ModelID", assetModelID);
+                // Log stock movement
+                await supabase.from("InventoryRecord").insert({
+                    RecordID: crypto.randomUUID(),
+                    ModelID: assetModelID,
+                    Quantity: 1,
+                    ActionType: 'RETURN',
+                    Notes: `Returned from assignment ${AssignmentID}`,
+                    CreatedAt: new Date().toISOString()
+                })
+            }
+        }
+
         const { data: updatedAssignment } = await supabase.from("Assignment").select("*").eq("AssignmentID", AssignmentID).single();
 
         return NextResponse.json(updatedAssignment)
