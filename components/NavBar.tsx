@@ -103,7 +103,7 @@ export default function NavBar({ user }: { user?: any }) {
 
             {/* Mobile Hamburger Button */}
             <button
-                className="md:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+                className="lg:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +117,7 @@ export default function NavBar({ user }: { user?: any }) {
 
             {/* Mobile Menu Overlay */}
             {isMenuOpen && (
-                <div className="absolute top-16 left-0 w-full bg-white border-b border-gray-200 shadow-lg py-4 px-6 flex flex-col gap-2 md:hidden z-50 animate-in fade-in slide-in-from-top-4">
+                <div className="absolute top-16 left-0 w-full bg-white border-b border-gray-200 shadow-lg py-4 px-6 flex flex-col gap-2 lg:hidden z-50 animate-in fade-in slide-in-from-top-4">
                     {links.map(link => {
                         const hasSubItems = link.subItems && link.subItems.length > 0;
                         const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)) || (hasSubItems && link.subItems!.some(sub => pathname.startsWith(sub.href)))

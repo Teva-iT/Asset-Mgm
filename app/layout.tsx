@@ -33,7 +33,7 @@ export default async function RootLayout({
                     </div>
 
                     {/* Center: Navigation */}
-                    <div className="flex-1 flex justify-end md:justify-center">
+                    <div className="flex-1 flex justify-end lg:justify-center">
                         <NavBar user={user} />
                     </div>
 
