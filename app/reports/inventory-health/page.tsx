@@ -59,6 +59,12 @@ export default function InventoryHealthDashboard() {
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
     const [forecasts, setForecasts] = useState<any[]>([])
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null)
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setToast({ message, type })
+        setTimeout(() => setToast(null), 3000)
+    }
 
     const fetchData = async () => {
         try {
@@ -89,7 +95,10 @@ export default function InventoryHealthDashboard() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ alertId, action: 'acknowledge' })
                 })
-                if (res.ok) fetchData()
+                if (res.ok) {
+                    showToast('Alert acknowledged')
+                    fetchData()
+                }
             } catch (err) {
                 console.error('Failed to acknowledge alert:', err)
             }
@@ -147,13 +156,32 @@ export default function InventoryHealthDashboard() {
                     <p className="text-gray-500 mt-1 font-medium">Real-time stock monitoring and replenishment intelligence.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all">
+                    <button
+                        onClick={() => window.location.href = '/inventory'}
+                        className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all"
+                    >
                         <PlusCircle className="h-4 w-4" />
                         Quick Reorder
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-lg shadow-blue-200 transition-all active:scale-95">
-                        <Database className="h-4 w-4" />
+                    <button
+                        onClick={async () => {
+                            const res = await fetch('/api/inventory/sync', { method: 'POST' })
+                            if (res.ok) {
+                                showToast('Manual scan triggered successfully')
+                                fetchData()
+                            } else {
+                                const err = await res.json()
+                                showToast(err.error || 'Scan failed', 'error')
+                            }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-lg shadow-blue-200 transition-all active:scale-95 group relative"
+                    >
+                        <Database className={`h-4 w-4 ${loading ? 'animate-pulse' : ''}`} />
                         Run Scan
+                        {/* Tooltip explanation */}
+                        <div className="absolute top-full mt-2 right-0 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                            Forces a full system scan of current stock levels against visibility rules to generate fresh alerts.
+                        </div>
                     </button>
                 </div>
             </div>
@@ -366,8 +394,21 @@ export default function InventoryHealthDashboard() {
                 </div>
             )}
 
-            {activeTab === 'rules' && <AlertRulesPanel />}
-            {activeTab === 'settings' && <NotificationSettingsPanel />}
+            {activeTab === 'rules' && <AlertRulesPanel onUpdate={fetchData} showToast={showToast} />}
+            {activeTab === 'settings' && <NotificationSettingsPanel showToast={showToast} />}
+
+            {/* Toast Component */}
+            {toast && (
+                <div className={`fixed bottom-8 right-8 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right duration-300 z-[200] ${toast.type === 'error' ? 'bg-red-600 text-white' :
+                    toast.type === 'info' ? 'bg-gray-800 text-white' :
+                        'bg-green-600 text-white'
+                    }`}>
+                    {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> :
+                        toast.type === 'error' ? <AlertTriangle className="h-5 w-5" /> :
+                            <Info className="h-5 w-5" />}
+                    <span className="font-bold text-sm tracking-tight">{toast.message}</span>
+                </div>
+            )}
         </div>
     )
 }
@@ -401,7 +442,90 @@ function SummaryCard({ title, value, subtext, color, icon }: any) {
     )
 }
 
-function AlertRulesPanel() {
+function AlertRulesPanel({ onUpdate, showToast }: { onUpdate: () => void, showToast: (m: string, t?: any) => void }) {
+    const [rules, setRules] = useState<any[]>([])
+    const [models, setModels] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [showModal, setShowModal] = useState(false)
+    const [editingRule, setEditingRule] = useState<any>(null)
+    const [targetType, setTargetType] = useState<'model' | 'category'>('model')
+    const [formData, setFormData] = useState({
+        modelId: '',
+        category: '',
+        lowThreshold: 5,
+        criticalThreshold: 2,
+        forecastWindowDays: 30
+    })
+
+    const fetchRules = async () => {
+        try {
+            const res = await fetch('/api/inventory/alert-rules')
+            if (res.ok) setRules(await res.json())
+
+            const mRes = await fetch('/api/assets/models')
+            if (mRes.ok) setModels(await mRes.json())
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => { fetchRules() }, [])
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Delete this rule?')) return
+        const res = await fetch(`/api/inventory/alert-rules?id=${id}`, { method: 'DELETE' })
+        if (res.ok) {
+            showToast('Rule deleted')
+            fetchRules()
+            onUpdate()
+        }
+    }
+
+    const openEdit = (rule: any) => {
+        setEditingRule(rule)
+        const isCategory = !!rule.Category && !rule.ModelID
+        setTargetType(isCategory ? 'category' : 'model')
+        setFormData({
+            modelId: rule.ModelID || '',
+            category: rule.Category || '',
+            lowThreshold: rule.LowThreshold,
+            criticalThreshold: rule.CriticalThreshold,
+            forecastWindowDays: rule.ForecastWindowDays || 30
+        })
+        setShowModal(true)
+    }
+
+    const openCreate = () => {
+        setEditingRule(null)
+        setTargetType('model')
+        setFormData({ modelId: '', category: '', lowThreshold: 5, criticalThreshold: 2, forecastWindowDays: 30 })
+        setShowModal(true)
+    }
+
+    const handleSave = async (e: any) => {
+        e.preventDefault()
+        const method = editingRule ? 'PATCH' : 'POST'
+        const url = editingRule
+            ? `/api/inventory/alert-rules?id=${editingRule.RuleID}`
+            : '/api/inventory/alert-rules'
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        })
+        if (res.ok) {
+            showToast(editingRule ? 'Rule updated successfully' : 'New rule created successfully')
+            setShowModal(false)
+            setEditingRule(null)
+            fetchRules()
+            onUpdate()
+        } else {
+            showToast('Failed to save rule', 'error')
+        }
+    }
+
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 animate-in slide-in-from-bottom-4">
             <div className="flex items-center justify-between mb-8">
@@ -409,31 +533,95 @@ function AlertRulesPanel() {
                     <h2 className="text-2xl font-bold text-gray-900">Alert Rules</h2>
                     <p className="text-gray-500 mt-1 font-medium italic">Override system defaults for specific categories or models.</p>
                 </div>
-                <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95">
+                <button
+                    onClick={openCreate}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                >
                     <Plus className="h-5 w-5" />
                     New Rule
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="p-6 border border-blue-100 bg-blue-50/30 rounded-2xl border-dashed flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-blue-50 transition-all">
-                    <div className="p-4 bg-white rounded-full shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                        <Plus className="h-8 w-8 text-blue-400" />
-                    </div>
-                    <span className="font-bold text-blue-600">Create Custom Rule</span>
-                    <p className="text-xs text-blue-400 font-medium mt-1 max-w-[180px]">Set specific thresholds for toners, monitors, etc.</p>
+            {loading ? (
+                <div className="py-10 text-center text-gray-400">Loading rules...</div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    {rules.map(rule => (
+                        <RuleCard
+                            key={rule.RuleID}
+                            category={rule.Category || rule.AssetModel?.Name}
+                            low={rule.LowThreshold}
+                            critical={rule.CriticalThreshold}
+                            window={rule.ForecastWindowDays}
+                            onDelete={() => handleDelete(rule.RuleID)}
+                            onEdit={() => openEdit(rule)}
+                        />
+                    ))}
                 </div>
-                {/* Mocked Rule Cards */}
-                <RuleCard category="Toners" low={5} critical={2} />
-                <RuleCard category="Monitors" low={2} critical={1} />
-            </div>
+            )}
+
+            {/* Simple Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <h3 className="text-2xl font-black text-gray-900 mb-6 tracking-tight">{editingRule ? 'Edit Alert Rule' : 'Create Alert Rule'}</h3>
+                        <form onSubmit={handleSave} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Select Asset Model</label>
+                                <select
+                                    value={formData.modelId}
+                                    onChange={e => setFormData({ ...formData, modelId: e.target.value })}
+                                    className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-gray-700"
+                                >
+                                    <option value="">-- Choose Model --</option>
+                                    {models.map(m => <option key={m.ModelID} value={m.ModelID}>{m.Name}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Low Threshold</label>
+                                    <input
+                                        type="number"
+                                        value={formData.lowThreshold}
+                                        onChange={e => setFormData({ ...formData, lowThreshold: parseInt(e.target.value) })}
+                                        className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-gray-700"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Critical Threshold</label>
+                                    <input
+                                        type="number"
+                                        value={formData.criticalThreshold}
+                                        onChange={e => setFormData({ ...formData, criticalThreshold: parseInt(e.target.value) })}
+                                        className="w-full bg-gray-50 border-none rounded-xl py-3 px-4 font-bold text-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-6 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 py-4 bg-gray-100 text-gray-500 font-bold rounded-2xl hover:bg-gray-200 transition-all"
+                                >Cancel</button>
+                                <button
+                                    type="submit"
+                                    className="flex-2 px-8 py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all"
+                                >{editingRule ? 'Update Rule' : 'Save Rule'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
-function RuleCard({ category, low, critical }: any) {
+function RuleCard({ category, low, critical, window: customWindow, onDelete, onEdit }: any) {
     return (
-        <div className="p-6 border border-gray-100 rounded-2xl hover:shadow-lg transition-all">
+        <div className="p-6 border border-gray-100 rounded-2xl hover:shadow-lg transition-all group">
             <div className="flex items-center justify-between mb-4">
                 <span className="font-black text-xl text-gray-800">{category}</span>
             </div>
@@ -448,25 +636,104 @@ function RuleCard({ category, low, critical }: any) {
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500 font-bold">Forecast Window</span>
-                    <span className="text-sm font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">30 Days</span>
+                    <span className="text-sm font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">{customWindow || 30} Days</span>
                 </div>
             </div>
             <div className="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
-                <button className="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">Delete</button>
-                <button className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-all">Edit Rule</button>
+                <button
+                    onClick={onDelete}
+                    className="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"
+                >Delete</button>
+                <button
+                    onClick={onEdit}
+                    className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-lg transition-all"
+                >Edit Rule</button>
             </div>
         </div>
     )
 }
 
-function NotificationSettingsPanel() {
+function NotificationSettingsPanel({ showToast }: { showToast: (m: string, t?: any) => void }) {
+    const [settings, setSettings] = useState<any>({
+        emailEnabled: true,
+        systemEnabled: true,
+        alertFrequency: 'Daily',
+        recipients: []
+    })
+    const [emailInput, setEmailInput] = useState('')
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch('/api/inventory/notification-settings')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.UserID) {
+                        const recs = typeof data.Recipients === 'string'
+                            ? data.Recipients.split(',').map((s: string) => s.trim()).filter(Boolean)
+                            : (Array.isArray(data.Recipients) ? data.Recipients : [])
+
+                        setSettings({
+                            emailEnabled: data.EmailEnabled,
+                            systemEnabled: data.SystemEnabled,
+                            alertFrequency: data.AlertFrequency,
+                            recipients: recs
+                        })
+                    }
+                }
+            } catch (err) { console.error(err) }
+            finally { setLoading(false) }
+        }
+        fetchSettings()
+    }, [])
+
+    const addEmail = (e?: any) => {
+        if (e) e.preventDefault()
+        if (emailInput && emailInput.includes('@') && !settings.recipients.includes(emailInput)) {
+            setSettings({
+                ...settings,
+                recipients: [...settings.recipients, emailInput]
+            })
+            setEmailInput('')
+        }
+    }
+
+    const removeEmail = (email: string) => {
+        setSettings({
+            ...settings,
+            recipients: settings.recipients.filter((r: string) => r !== email)
+        })
+    }
+
+    const handleSave = async () => {
+        try {
+            const res = await fetch('/api/inventory/notification-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...settings,
+                    recipients: settings.recipients.join(','), // Save as string
+                    userId: 'mahan'
+                })
+            })
+            if (res.ok) showToast('Preferences saved successfully')
+            else showToast('Failed to save settings', 'error')
+        } catch (err) { console.error(err) }
+    }
+
+    if (loading) return <div className="p-8 text-center text-gray-400">Loading settings...</div>
+
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 animate-in slide-in-from-bottom-4 max-w-2xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Notification Settings</h2>
             <p className="text-gray-500 font-medium mb-8">Choose how and when you want to be notified about stock levels.</p>
 
             <div className="space-y-8">
-                <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-blue-100 transition-all cursor-pointer group">
+                <div
+                    onClick={() => setSettings({ ...settings, systemEnabled: !settings.systemEnabled })}
+                    className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-blue-100 transition-all cursor-pointer group"
+                >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
                             <Bell className="h-6 w-6 text-blue-600" />
@@ -476,12 +743,15 @@ function NotificationSettingsPanel() {
                             <span className="text-xs text-gray-400 font-medium">Show real-time alerts in the dashboard bell.</span>
                         </div>
                     </div>
-                    <div className="w-12 h-6 bg-blue-600 rounded-full relative flex items-center px-1">
-                        <div className="w-4 h-4 bg-white rounded-full absolute right-1"></div>
+                    <div className={`w-12 h-6 rounded-full relative flex items-center px-1 transition-all ${settings.systemEnabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                        <div className={`w-4 h-4 bg-white rounded-full absolute shadow-sm transition-all ${settings.systemEnabled ? 'right-1' : 'left-1'}`}></div>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-blue-100 transition-all cursor-pointer group">
+                <div
+                    onClick={() => setSettings({ ...settings, emailEnabled: !settings.emailEnabled })}
+                    className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-blue-100 transition-all cursor-pointer group"
+                >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors">
                             <PlusCircle className="h-6 w-6 text-purple-600" />
@@ -491,25 +761,51 @@ function NotificationSettingsPanel() {
                             <span className="text-xs text-gray-400 font-medium">Daily digest and critical threshold alerts.</span>
                         </div>
                     </div>
-                    <div className="w-12 h-6 bg-blue-600 rounded-full relative flex items-center px-1 shadow-inner">
-                        <div className="w-4 h-4 bg-white rounded-full absolute right-1"></div>
+                    <div className={`w-12 h-6 rounded-full relative flex items-center px-1 shadow-inner transition-all ${settings.emailEnabled ? 'bg-purple-600' : 'bg-gray-200'}`}>
+                        <div className={`w-4 h-4 bg-white rounded-full absolute shadow-sm transition-all ${settings.emailEnabled ? 'right-1' : 'left-1'}`}></div>
                     </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Email Recipients</label>
-                    <div className="relative">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {settings.recipients.map((email: string) => (
+                            <div key={email} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold group">
+                                {email}
+                                <button
+                                    onClick={() => removeEmail(email)}
+                                    className="hover:text-red-500 transition-colors"
+                                >
+                                    <Plus className="h-3 w-3 rotate-45" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <form onSubmit={addEmail} className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
                         <input
-                            type="text"
-                            className="w-full bg-gray-50 border-none rounded-2xl py-4 pl-12 pr-4 font-bold text-gray-700 focus:ring-2 focus:ring-blue-100 transition-all"
-                            placeholder="it-team@company.com, inventory@company.com"
+                            type="email"
+                            value={emailInput}
+                            onChange={e => setEmailInput(e.target.value)}
+                            onBlur={addEmail}
+                            className="w-full bg-gray-50 border-none rounded-2xl py-4 pl-12 pr-12 font-bold text-gray-700 focus:ring-2 focus:ring-blue-100 transition-all"
+                            placeholder="Add email and press Enter..."
                         />
-                    </div>
+                        <button
+                            type="submit"
+                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                        </button>
+                    </form>
+                    <p className="text-[10px] text-gray-400 font-medium px-2 italic">Multiple emails supported. Rules will be sent to all listed recipients.</p>
                 </div>
 
                 <div className="pt-4 border-t border-gray-50">
-                    <button className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">
+                    <button
+                        onClick={handleSave}
+                        className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]"
+                    >
                         Save Preferences
                     </button>
                 </div>

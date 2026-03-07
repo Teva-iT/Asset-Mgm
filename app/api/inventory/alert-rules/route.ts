@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("InventoryAlertRule")
             .select(`
                 *,
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         const body = await req.json()
         const { modelId, category, lowThreshold, criticalThreshold, forecastWindowDays, predictiveThresholdDays, leadTimeDays, isEnabled } = body
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("InventoryAlertRule")
             .upsert({
                 ModelID: modelId || null,
@@ -51,13 +51,42 @@ export async function DELETE(req: Request) {
         const id = searchParams.get('id')
         if (!id) throw new Error("ID required")
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("InventoryAlertRule")
             .delete()
             .eq("RuleID", id)
 
         if (error) throw error
         return NextResponse.json({ success: true })
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+}
+
+export async function PATCH(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url)
+        const id = searchParams.get('id')
+        if (!id) throw new Error("ID required")
+
+        const body = await req.json()
+        const { modelId, category, lowThreshold, criticalThreshold, forecastWindowDays } = body
+
+        const { data, error } = await supabaseAdmin
+            .from("InventoryAlertRule")
+            .update({
+                ModelID: modelId || null,
+                Category: category || null,
+                LowThreshold: lowThreshold,
+                CriticalThreshold: criticalThreshold,
+                ForecastWindowDays: forecastWindowDays || 30,
+                UpdatedAt: new Date().toISOString()
+            })
+            .eq("RuleID", id)
+            .select()
+
+        if (error) throw error
+        return NextResponse.json(data?.[0] || {})
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }

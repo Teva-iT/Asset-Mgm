@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET() {
     try {
         // 1. Fetch active alerts
-        const { data: alerts, error: alertsError } = await supabase
+        const { data: alerts, error: alertsError } = await supabaseAdmin
             .from("InventoryAlert")
             .select(`
                 *,
@@ -19,15 +19,11 @@ export async function GET() {
         if (alertsError) throw alertsError
 
         // 2. Fetch all models for summary and forecasting
-        const { data: models, error: modelsError } = await supabase
+        const { data: models, error: modelsError } = await supabaseAdmin
             .from("AssetModel")
-            .select("ModelID, Name, AvailableStock, ReorderLevel, CriticalThreshold, CreatedAt, Manufacturer(Name), Category")
+            .select("ModelID, Name, AvailableStock, ReorderLevel, CriticalThreshold, createdAt, Manufacturer(Name), Category")
 
         if (modelsError) throw modelsError
-
-        // 3. Predictive Logic (Simple version for summary)
-        // In a real app, this would use the logic from /forecast/route.ts
-        // For now, let's identify existing depletion risks if we can
 
         const summary = {
             lowStock: models.filter(m => m.AvailableStock <= (m.ReorderLevel || 5) && m.AvailableStock > (m.CriticalThreshold || 2) && m.AvailableStock > 0).length,
@@ -36,7 +32,6 @@ export async function GET() {
             totalModels: models.length
         }
 
-        // 4. Combine Active Alerts with Summary (we already have alerts from step 1)
         return NextResponse.json({ alerts, summary })
     } catch (error: any) {
         console.error('API Error:', error)
@@ -51,13 +46,13 @@ export async function POST(req: Request) {
         const { alertId, action, snoozeUntil } = body
 
         if (action === 'resolve') {
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from("InventoryAlert")
                 .update({ IsResolved: true, ResolvedAt: new Date().toISOString() })
                 .eq("AlertID", alertId)
             if (error) throw error
         } else if (action === 'snooze') {
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from("InventoryAlert")
                 .update({
                     IsSnoozed: true,
@@ -66,7 +61,7 @@ export async function POST(req: Request) {
                 .eq("AlertID", alertId)
             if (error) throw error
         } else if (action === 'acknowledge') {
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from("InventoryAlert")
                 .update({
                     IsAcknowledged: true,

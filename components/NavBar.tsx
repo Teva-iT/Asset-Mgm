@@ -52,8 +52,8 @@ export default function NavBar({ user }: { user?: any }) {
             name: 'Reports', href: '#', subItems: [
                 { name: 'Inventory Health & Alerts', href: '/reports/inventory-health' },
                 { name: 'Inventory Reports', href: '/reports?type=inventory' },
-                { name: 'Asset Usage', href: '/reports?type=usage' },
-                { name: 'Lifecycle Reports', href: '/reports?type=lifecycle' }
+                { name: 'Asset Usage', href: '/reports/asset-usage' },
+                { name: 'Lifecycle Reports', href: '/reports/lifecycle' }
             ]
         },
         {

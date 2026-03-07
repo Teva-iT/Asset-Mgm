@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET() {
     try {
         // 1. Fetch all models
-        const { data: models, error: modelsError } = await supabase
+        const { data: models, error: modelsError } = await supabaseAdmin
             .from("AssetModel")
-            .select("ModelID, Name, AvailableStock, CreatedAt")
+            .select("ModelID, Name, AvailableStock, createdAt")
 
         if (modelsError) throw modelsError
 
         // 2. Fetch all alert rules to get custom settings
-        const { data: rules, error: rulesError } = await supabase
+        const { data: rules, error: rulesError } = await supabaseAdmin
             .from("InventoryAlertRule")
             .select("ModelID, Category, ForecastWindowDays, PredictiveThresholdDays, LeadTimeDays")
             .eq("IsEnabled", true)
@@ -24,7 +24,7 @@ export async function GET() {
         windowStartDate.setDate(windowStartDate.getDate() - maxWindow)
 
         // 4. Fetch assignment history
-        const { data: history, error: historyError } = await supabase
+        const { data: history, error: historyError } = await supabaseAdmin
             .from("InventoryRecord")
             .select("ModelID, Quantity, CreatedAt")
             .eq("ActionType", "ASSIGN")
@@ -50,7 +50,7 @@ export async function GET() {
             const totalConsumption = Math.abs(modelHistory.reduce((sum, h) => sum + (h.Quantity || 0), 0))
 
             // Calculate window days (min customWindow or days since model creation)
-            const createdAt = new Date(model.CreatedAt)
+            const createdAt = new Date(model.createdAt)
             const now = new Date()
             const daysSinceCreated = Math.max(1, Math.ceil((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)))
             const windowDays = Math.min(customWindow, daysSinceCreated)

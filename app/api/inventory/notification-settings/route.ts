@@ -1,52 +1,92 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { cookies } from 'next/headers'
+import { jwtVerify } from 'jose'
 
-export async function GET() {
+async function getAuthenticatedUserId(): Promise<string | null> {
     try {
-        // In a real app, we'd get the current user ID from auth context
-        // For now, we'll fetch the first user as a placeholder if noUserID provided
-        const { data: userData } = await supabase.from("User").select("UserID").limit(1).single()
-        if (!userData) throw new Error("No users found")
+        const cookieStore = await cookies()
+        const token = cookieStore.get('auth_token')?.value
+        if (!token) return null
 
-        const { data, error } = await supabase
-            .from("InventoryNotificationSetting")
-            .select("*")
-            .eq("UserID", userData.UserID)
-            .single()
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret')
+        const { payload } = await jwtVerify(token, secret)
+        return payload.userId as string || null
+    } catch {
+        return null
+    }
+}
 
-        if (error && error.code !== 'PGRST116') throw error // PGRST116 is 'no rows returned'
+export async function GET(req: Request) {
+    try {
+        // Try to get userId from auth token first, fallback to query param
+        let userId = await getAuthenticatedUserId()
 
-        return NextResponse.json(data || {
-            UserID: userData.UserID,
-            EmailEnabled: true,
-            SystemEnabled: true,
-            AlertFrequency: 'Once',
-            Recipients: ''
-        })
+        if (!userId) {
+            // Fallback: look up by username from query param
+            const { searchParams } = new URL(req.url)
+            const username = searchParams.get('userId')
+            if (username) {
+                const { data: user } = await supabaseAdmin
+                    .from('User')
+                    .select('UserID')
+                    .eq('Username', username)
+                    .maybeSingle()
+                userId = user?.UserID || null
+            }
+        }
+
+        if (!userId) return NextResponse.json({})
+
+        const { data, error } = await supabaseAdmin
+            .from('InventoryNotificationSetting')
+            .select('*')
+            .eq('UserID', userId)
+            .maybeSingle()
+
+        if (error) throw error
+        return NextResponse.json(data || {})
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
 
-export async function PATCH(req: Request) {
+export async function POST(req: Request) {
     try {
-        const body = await req.json()
-        const { userId, emailEnabled, systemEnabled, alertFrequency, recipients } = body
+        // Get authenticated user's real UUID
+        let userId = await getAuthenticatedUserId()
 
-        const { data, error } = await supabase
-            .from("InventoryNotificationSetting")
+        const body = await req.json()
+        const { emailEnabled, systemEnabled, alertFrequency, recipients } = body
+
+        // If no auth token, try to lookup by username passed in body
+        if (!userId && body.userId) {
+            const { data: user } = await supabaseAdmin
+                .from('User')
+                .select('UserID')
+                .eq('Username', body.userId)
+                .maybeSingle()
+            userId = user?.UserID || null
+        }
+
+        if (!userId) {
+            return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+        }
+
+        const { data, error } = await supabaseAdmin
+            .from('InventoryNotificationSetting')
             .upsert({
                 UserID: userId,
                 EmailEnabled: emailEnabled,
                 SystemEnabled: systemEnabled,
-                AlertFrequency: alertFrequency,
+                AlertFrequency: alertFrequency || 'Once',
                 Recipients: recipients,
                 UpdatedAt: new Date().toISOString()
-            })
+            }, { onConflict: 'UserID' })
             .select()
 
         if (error) throw error
-        return NextResponse.json(data[0])
+        return NextResponse.json(data?.[0] || {})
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
