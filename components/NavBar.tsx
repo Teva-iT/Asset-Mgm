@@ -3,12 +3,31 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Bell, User } from 'lucide-react'
 
 export default function NavBar({ user }: { user?: any }) {
     const pathname = usePathname()
 
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+    const [alertCount, setAlertCount] = useState(0)
+
+    useEffect(() => {
+        const fetchAlerts = async () => {
+            try {
+                const res = await fetch('/api/inventory/alerts')
+                if (res.ok) {
+                    const data = await res.json()
+                    setAlertCount(data.alerts?.length || 0)
+                }
+            } catch (error) {
+                console.error('Failed to fetch alerts', error)
+            }
+        }
+        fetchAlerts()
+        const interval = setInterval(fetchAlerts, 30000) // Poll every 30 seconds
+        return () => clearInterval(interval)
+    }, [])
 
     const links = [
         { name: 'Home', href: '/' },
@@ -29,7 +48,14 @@ export default function NavBar({ user }: { user?: any }) {
         },
         { name: 'Employees', href: '/employees' },
         { name: 'IT Inventory', href: '/inventory' },
-        { name: 'Reports', href: '/reports' },
+        {
+            name: 'Reports', href: '#', subItems: [
+                { name: 'Inventory Health & Alerts', href: '/reports/inventory-health' },
+                { name: 'Inventory Reports', href: '/reports?type=inventory' },
+                { name: 'Asset Usage', href: '/reports?type=usage' },
+                { name: 'Lifecycle Reports', href: '/reports?type=lifecycle' }
+            ]
+        },
         {
             name: 'Service Requests', href: '#', subItems: [
                 { name: 'Access Requests', href: '/access-requests' },
@@ -99,6 +125,20 @@ export default function NavBar({ user }: { user?: any }) {
                         </Link>
                     )
                 })}
+
+                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-200">
+                    <Link href="/reports/inventory-health" className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors">
+                        <Bell className="h-5 w-5" />
+                        {alertCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white animate-pulse">
+                                {alertCount}
+                            </span>
+                        )}
+                    </Link>
+                    <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                        <User className="h-5 w-5" />
+                    </div>
+                </div>
             </div>
 
             {/* Mobile Hamburger Button */}

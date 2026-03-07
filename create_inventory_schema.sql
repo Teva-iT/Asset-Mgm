@@ -7,7 +7,7 @@ ALTER TABLE "AssetModel" ADD COLUMN IF NOT EXISTS "ReorderLevel" INTEGER NOT NUL
 -- 2. Proper Inventory Ledger
 CREATE TABLE IF NOT EXISTS "InventoryRecord" (
   "RecordID" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "ModelID" UUID NOT NULL REFERENCES "AssetModel"("ModelID"),
+  "ModelID" UUID NOT NULL REFERENCES "AssetModel"("ModelID") ON DELETE CASCADE,
   "Quantity" INTEGER NOT NULL,
   "ActionType" TEXT NOT NULL, -- ADD, ASSIGN, RETURN, ADJUST
   "AssetID" UUID REFERENCES "Asset"("AssetID"), -- Nullable if bulk

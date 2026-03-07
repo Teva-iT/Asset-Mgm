@@ -206,6 +206,6 @@ CREATE TABLE "InventoryRecord" (
   "Notes" TEXT,
   "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "CreatedByUserID" TEXT,
-  FOREIGN KEY ("ModelID") REFERENCES "AssetModel"("ModelID"),
+  FOREIGN KEY ("ModelID") REFERENCES "AssetModel"("ModelID") ON DELETE CASCADE,
   FOREIGN KEY ("CreatedByUserID") REFERENCES "User"("UserID")
 );

@@ -6,7 +6,9 @@ const fs = require('fs')
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const sql = fs.readFileSync('create_assign_function.sql', 'utf8')
+const filename = process.argv[2] || 'create_assign_function.sql'
+console.log(`Applying SQL from: ${filename}`)
+const sql = fs.readFileSync(filename, 'utf8')
 
 const payload = JSON.stringify({ query: sql })
 const urlObj = new URL(supabaseUrl + '/rest/v1/rpc/exec_sql')
