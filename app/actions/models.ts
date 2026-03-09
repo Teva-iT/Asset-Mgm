@@ -173,9 +173,39 @@ export async function updateModelAction(modelId: string, formData: FormData) {
     }
 }
 
-// Delete a model
-export async function deleteModel(modelId: string) {
+// Check dependencies before deleting a model
+export async function checkModelDependencies(modelId: string) {
     try {
+        const { count, error } = await supabase
+            .from("Asset")
+            .select("*", { count: "exact", head: true })
+            .eq("ModelID", modelId);
+
+        if (error) throw error;
+
+        return { success: true, count: count || 0 };
+    } catch (error: any) {
+        console.error("Error checking model dependencies:", error);
+        return { success: false, error: "Failed to check dependencies" };
+    }
+}
+
+// Delete a model
+export async function deleteModel(modelId: string, force: boolean = false) {
+    try {
+        if (force) {
+            // First delete associated assets (InventoryRecords should cascade via DB schema, but we can explicitly delete Assets to be safe as that might be what's blocking)
+            const { error: assetError } = await supabase
+                .from("Asset")
+                .delete()
+                .eq("ModelID", modelId);
+
+            if (assetError) {
+                console.error("Failed to force delete associated assets:", assetError);
+                return { success: false, error: "Failed to delete associated assets during force delete." };
+            }
+        }
+
         const { error } = await supabase
             .from("AssetModel")
             .delete()
@@ -282,10 +312,6 @@ export async function adjustStockAction(formData: FormData) {
         return { success: false, error: "Invalid stock value" };
     }
 
-    if (difference === 0) {
-        return { success: false, error: "No change in stock — nothing to adjust" };
-    }
-
     try {
         const { data: model, error: fetchError } = await supabase
             .from("AssetModel")
@@ -295,27 +321,30 @@ export async function adjustStockAction(formData: FormData) {
 
         if (fetchError || !model) throw new Error("Model not found");
 
-        const assignedStock = model.AssignedStock || 0;
-        // New available = newTotal - assigned (but not below 0)
-        const newAvailable = Math.max(0, newStock - assignedStock);
+        if (difference !== 0) {
+            // Only update stock counts when there is an actual change
+            const assignedStock = model.AssignedStock || 0;
+            const newAvailable = Math.max(0, newStock - assignedStock);
 
-        const { error: updateError } = await supabase
-            .from("AssetModel")
-            .update({
-                TotalStock: newStock,
-                AvailableStock: newAvailable,
-                updatedAt: new Date().toISOString()
-            })
-            .eq("ModelID", modelId);
+            const { error: updateError } = await supabase
+                .from("AssetModel")
+                .update({
+                    TotalStock: newStock,
+                    AvailableStock: newAvailable,
+                    updatedAt: new Date().toISOString()
+                })
+                .eq("ModelID", modelId);
 
-        if (updateError) throw updateError;
+            if (updateError) throw updateError;
+        }
 
-        // Log the adjustment
+        // Log the adjustment (includes location-only changes)
+        const actionType = difference === 0 ? "LOCATION_CHANGE" : "ADJUST";
         await supabase.from("InventoryRecord").insert({
             RecordID: crypto.randomUUID(),
             ModelID: modelId,
             Quantity: difference,
-            ActionType: "ADJUST",
+            ActionType: actionType,
             StorageLocationID: storageLocationId,
             Notes: `Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
             CreatedAt: new Date().toISOString()

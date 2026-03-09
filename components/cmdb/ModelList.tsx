@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { duplicateModel, deleteModel } from "@/app/actions/models";
+import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -29,6 +29,8 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     const router = useRouter();
     const [cloningId, setCloningId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ id: string, name: string, assetsCount: number } | null>(null);
+    const [isCheckingDeps, setIsCheckingDeps] = useState(false);
     const [forecastData, setForecastData] = useState<any[]>([]);
 
     // --- Search & Filter State ---
@@ -78,14 +80,28 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
         setCloningId(null);
     }
 
-    async function handleDelete(modelId: string, modelName: string) {
-        if (!confirm(`Are you sure you want to delete the model "${modelName}"?`)) {
-            return;
-        }
+    async function handleDeleteClick(modelId: string, modelName: string) {
+        setIsCheckingDeps(true);
+        setOpenDropdownId(null);
+        const res = await checkModelDependencies(modelId);
+        setIsCheckingDeps(false);
 
-        setDeletingId(modelId);
-        const res = await deleteModel(modelId);
         if (res.success) {
+            setDeleteConfirmInfo({ id: modelId, name: modelName, assetsCount: res.count as number });
+        } else {
+            alert("Failed to check dependencies.");
+        }
+    }
+
+    async function handleConfirmDelete(force: boolean = false) {
+        if (!deleteConfirmInfo) return;
+
+        const { id, name } = deleteConfirmInfo;
+        setDeletingId(id);
+
+        const res = await deleteModel(id, force);
+        if (res.success) {
+            setDeleteConfirmInfo(null);
             router.refresh();
         } else {
             alert(res.error || "Failed to delete model.");
@@ -148,6 +164,89 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
 
     return (
         <div className="p-6 space-y-6">
+            {/* Delete Confirmation Dialog */}
+            {deleteConfirmInfo && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95">
+                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-red-50/50">
+                            <div className="flex gap-3">
+                                <div className="p-2 bg-red-100 text-red-600 rounded-lg">
+                                    <AlertTriangle className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">Delete Model</h2>
+                                    <p className="text-sm text-gray-500 mt-0.5">Are you sure you want to delete <span className="font-semibold text-gray-800">{deleteConfirmInfo.name}</span>?</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setDeleteConfirmInfo(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {deleteConfirmInfo.assetsCount > 0 ? (
+                                <div className="bg-orange-50 border border-orange-200 text-orange-800 rounded-lg p-4 text-sm">
+                                    <p className="font-semibold flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4" /> Wait! This model is in use.
+                                    </p>
+                                    <p className="mb-3">
+                                        This model cannot be safely deleted because it is associated with <strong>{deleteConfirmInfo.assetsCount}</strong> existing asset(s).
+                                    </p>
+                                    <Link
+                                        href={`/inventory/cmdb/cis`}
+                                        className="text-orange-700 font-semibold hover:underline inline-flex items-center gap-1"
+                                    >
+                                        View hardware assets <Search className="h-3 w-3" />
+                                    </Link>
+
+                                    <div className="mt-4 pt-4 border-t border-orange-200">
+                                        <p className="text-orange-900 font-semibold mb-1">Force Delete?</p>
+                                        <p className="text-xs text-orange-700/80 mb-3">By forcing this deletion, all associated hardware assets will be permanently removed.</p>
+                                        <div className="flex justify-end gap-3">
+                                            <button
+                                                onClick={() => setDeleteConfirmInfo(null)}
+                                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white rounded-lg transition-colors bg-orange-100/50"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => handleConfirmDelete(true)}
+                                                disabled={deletingId === deleteConfirmInfo.id}
+                                                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                                            >
+                                                {deletingId === deleteConfirmInfo.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                Force Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-600">This action cannot be undone. This model will be permanently removed from the system.</p>
+                                    <div className="flex justify-end items-center gap-3 pt-4">
+                                        <button
+                                            onClick={() => setDeleteConfirmInfo(null)}
+                                            disabled={deletingId === deleteConfirmInfo.id}
+                                            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfirmDelete(false)}
+                                            disabled={deletingId === deleteConfirmInfo.id}
+                                            className="px-6 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            {deletingId === deleteConfirmInfo.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                            Delete
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900">Asset Models</h1>
@@ -464,7 +563,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
 
                                                         <button
                                                             onClick={() => {
-                                                                handleDelete(m.ModelID, m.Name);
+                                                                handleDeleteClick(m.ModelID, m.Name);
                                                                 setOpenDropdownId(null);
                                                             }}
                                                             disabled={deletingId === m.ModelID}

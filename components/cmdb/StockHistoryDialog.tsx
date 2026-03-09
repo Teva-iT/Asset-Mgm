@@ -9,9 +9,10 @@ const ACTION_META: Record<string, { color: string; label: string; icon: any }> =
     ASSIGN: { icon: Minus, color: "text-blue-700 bg-blue-50 border-blue-200", label: "Assigned" },
     RETURN: { icon: RefreshCw, color: "text-indigo-700 bg-indigo-50 border-indigo-200", label: "Returned" },
     ADJUST: { icon: RefreshCw, color: "text-orange-700 bg-orange-50 border-orange-200", label: "Adjusted" },
+    LOCATION_CHANGE: { icon: RefreshCw, color: "text-purple-700 bg-purple-50 border-purple-200", label: "Relocated" },
 };
 
-const ALL_TYPES = ["ADD", "ASSIGN", "RETURN", "ADJUST"];
+const ALL_TYPES = ["ADD", "ASSIGN", "RETURN", "ADJUST", "LOCATION_CHANGE"];
 
 export default function StockHistoryDialog({
     model,

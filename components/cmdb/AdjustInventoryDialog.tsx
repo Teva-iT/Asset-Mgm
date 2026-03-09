@@ -8,6 +8,7 @@ import StorageLocationSelect from "@/components/StorageLocationSelect";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const REASONS = [
+    { value: "location_change", label: "Location Change / Relocation" },
     { value: "correction", label: "Correction / Counting Error" },
     { value: "damaged", label: "Damaged / Broken" },
     { value: "lost", label: "Lost / Missing" },
@@ -51,10 +52,6 @@ export default function AdjustInventoryDialog({
         setError("");
         setLocationError("");
 
-        if (diff === 0) {
-            setError("New stock value is the same as current. No change needed.");
-            return;
-        }
 
         if (!locationId) {
             setLocationError("Storage Location is required.");
@@ -212,7 +209,7 @@ export default function AdjustInventoryDialog({
                                     className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={isSubmitting || diff === 0}
+                                <button type="submit" disabled={isSubmitting}
                                     className="px-6 py-2 text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-md transition-all disabled:opacity-50">
                                     {isSubmitting ? "Saving..." : "Apply Adjustment"}
                                 </button>
