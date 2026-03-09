@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SlidersHorizontal, X, MapPin } from "lucide-react";
 import { adjustStockAction } from "@/app/actions/models";
@@ -26,6 +26,7 @@ export default function AdjustInventoryDialog({
 }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [newStock, setNewStock] = useState<number>(model.TotalStock || 0);
@@ -63,19 +64,21 @@ export default function AdjustInventoryDialog({
         formData.set("difference", String(diff));
         formData.set("storageLocationId", locationId);
 
-        try {
-            const res = await adjustStockAction(formData);
-            if (res.success) {
-                setOpen(false);
-                router.refresh();
-            } else {
-                setError(res.error || "Failed to adjust stock");
+        startTransition(async () => {
+            try {
+                const res = await adjustStockAction(formData);
+                if (res.success) {
+                    setOpen(false);
+                    router.refresh();
+                } else {
+                    setError(res.error || "Failed to adjust stock");
+                }
+            } catch (err: any) {
+                setError(err.message || "Failed to adjust stock due to a server error");
+            } finally {
+                setIsSubmitting(false);
             }
-        } catch (err: any) {
-            setError(err.message || "Failed to adjust stock");
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     }
 
     return (
@@ -205,13 +208,13 @@ export default function AdjustInventoryDialog({
                             </div>
 
                             <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
-                                <button type="button" onClick={() => setOpen(false)} disabled={isSubmitting}
+                                <button type="button" onClick={() => setOpen(false)} disabled={isSubmitting || isPending}
                                     className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={isSubmitting}
+                                <button type="submit" disabled={isSubmitting || isPending}
                                     className="px-6 py-2 text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-md transition-all disabled:opacity-50">
-                                    {isSubmitting ? "Saving..." : "Apply Adjustment"}
+                                    {isSubmitting || isPending ? "Saving..." : "Apply Adjustment"}
                                 </button>
                             </div>
                         </form>
