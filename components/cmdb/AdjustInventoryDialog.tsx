@@ -47,11 +47,9 @@ export default function AdjustInventoryDialog({
         setError("");
     }
 
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault();
+    async function formAction(formData: FormData) {
         setError("");
         setLocationError("");
-
 
         if (!locationId) {
             setLocationError("Storage Location is required.");
@@ -59,7 +57,6 @@ export default function AdjustInventoryDialog({
         }
 
         setIsSubmitting(true);
-        const formData = new FormData(e.currentTarget);
         formData.set("modelId", model.ModelID);
         formData.set("currentStock", String(currentStock));
         formData.set("newStock", String(newStock));
@@ -86,7 +83,9 @@ export default function AdjustInventoryDialog({
             {variant === "dropdown" ? (
                 <button
                     onClick={() => { setOpen(true); resetForm(); }}
-                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    disabled={(model.TotalStock || 0) === 0}
+                    title={(model.TotalStock || 0) === 0 ? "Cannot adjust zero stock. Use Add Stock instead." : triggerLabel}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
                     <SlidersHorizontal className="h-4 w-4 text-orange-500" />
                     {triggerLabel}
@@ -94,8 +93,9 @@ export default function AdjustInventoryDialog({
             ) : (
                 <button
                     onClick={() => { setOpen(true); resetForm(); }}
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3"
-                    title="Adjust Inventory"
+                    disabled={(model.TotalStock || 0) === 0}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={(model.TotalStock || 0) === 0 ? "Cannot adjust zero stock. Use Add Stock instead." : "Adjust Inventory"}
                 >
                     <SlidersHorizontal className="h-4 w-4 mr-1" />
                     Adjust
@@ -103,7 +103,7 @@ export default function AdjustInventoryDialog({
             )}
 
             {open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-[440px] overflow-hidden border border-gray-100">
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                             <div className="flex gap-3">
@@ -120,7 +120,7 @@ export default function AdjustInventoryDialog({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                        <form action={formAction} className="p-6 space-y-5">
                             {error && (
                                 <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-md text-sm">{error}</div>
                             )}
