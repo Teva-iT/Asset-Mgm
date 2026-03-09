@@ -39,6 +39,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     const [filterManufacturer, setFilterManufacturer] = useState("All");
     const [filterStatus, setFilterStatus] = useState("All");
     const [filterLocation, setFilterLocation] = useState("All");
+    const [filterColor, setFilterColor] = useState("All");
     const [showFilters, setShowFilters] = useState(false);
 
     // --- Actions Dropdown State ---
@@ -165,10 +166,17 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         if (filterStatus === "Out of Stock" && (m.AvailableStock || 0) > 0) return false;
         if (filterStatus === "Low Stock" && (m.AvailableStock || 0) > (m.ReorderLevel || 0)) return false;
 
+        // Color Filter
+        if (filterColor !== "All" && m.Color !== filterColor) return false;
+
         return true;
     });
 
-    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterLocation !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0);
+    const totalAvailable = filteredModels.reduce((sum, m) => sum + (m.AvailableStock || 0), 0);
+    const totalAssigned = filteredModels.reduce((sum, m) => sum + (m.AssignedStock || 0), 0);
+    const totalStock = totalAvailable + totalAssigned;
+
+    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterLocation !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0) + (filterColor !== "All" ? 1 : 0);
 
     function clearFilters() {
         setSearchQuery("");
@@ -176,6 +184,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         setFilterManufacturer("All");
         setFilterLocation("All");
         setFilterStatus("All");
+        setFilterColor("All");
     }
 
     return (
@@ -308,8 +317,15 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                         </button>
 
                         {/* Summary */}
-                        <div className="text-sm text-gray-500 whitespace-nowrap pl-2 border-l border-gray-200">
-                            Showing <span className="font-semibold text-gray-900">{filteredModels.length}</span> of {models.length}
+                        <div className="text-sm text-gray-500 whitespace-nowrap pl-2 border-l border-gray-200 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1">
+                            <div>
+                                Models: <span className="font-bold text-gray-900">{filteredModels.length}</span>
+                            </div>
+                            <div className="hidden sm:block w-px h-3 bg-gray-200" />
+                            <div>
+                                Total Stock: <span className="font-bold text-blue-600">{totalStock}</span>
+                                <span className="text-[10px] ml-1 uppercase opacity-60">({totalAvailable} Avail / {totalAssigned} Use)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -377,6 +393,22 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                             </div>
                         )}
 
+                        {/* Color Filter */}
+                        <div className="flex-1 min-w-[150px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Color</label>
+                            <select
+                                value={filterColor}
+                                onChange={(e) => setFilterColor(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="All">All Colors</option>
+                                <option value="Black">Black</option>
+                                <option value="Cyan">Cyan</option>
+                                <option value="Magenta">Magenta</option>
+                                <option value="Yellow">Yellow</option>
+                            </select>
+                        </div>
+
                         {/* Clear All */}
                         {(searchQuery || activeFilterCount > 0) && (
                             <div className="flex items-end">
@@ -401,6 +433,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                             <th className="h-12 px-4 align-middle font-medium w-[20%] min-w-[150px]">Series</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Manufacturer</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Category</th>
+                            <th className="h-12 px-4 align-middle font-medium min-w-[100px]">Color</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[150px]">Location</th>
                             <th className="h-12 px-4 align-middle font-medium text-center min-w-[80px]">Stock</th>
                             <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Stock Status</th>
@@ -479,6 +512,16 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                         <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary hover:bg-primary/20">
                                             {m.Category}
                                         </span>
+                                    </td>
+                                    <td className="p-4">
+                                        {m.Color ? (
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-2.5 h-2.5 rounded-full border border-black/10" style={{ backgroundColor: m.Color.toLowerCase() === 'magenta' ? '#FF00FF' : m.Color.toLowerCase() === 'cyan' ? '#00FFFF' : m.Color.toLowerCase() === 'yellow' ? '#FFFF00' : '#000000' }} />
+                                                <span className="text-xs font-medium">{m.Color}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-gray-400 italic">—</span>
+                                        )}
                                     </td>
                                     <td className="p-4">
                                         <div className="flex items-center gap-1.5">
