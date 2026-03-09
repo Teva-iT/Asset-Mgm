@@ -403,7 +403,8 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Category</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[150px]">Location</th>
                             <th className="h-12 px-4 align-middle font-medium text-center min-w-[80px]">Stock</th>
-                            <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Status</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Stock Status</th>
+                            <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Condition</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[100px]">Active Devices</th>
                             <th className="h-12 px-4 align-middle font-medium text-right min-w-[160px]">Actions</th>
                         </tr>
@@ -518,6 +519,16 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                                 </div>
                                             )}
                                         </div>
+                                    </td>
+                                    {/* ✅ Model Condition Status */}
+                                    <td className="p-4 text-center">
+                                        {m.Status ? (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-wider">
+                                                {m.Status}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-gray-400 italic">—</span>
+                                        )}
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-col">
