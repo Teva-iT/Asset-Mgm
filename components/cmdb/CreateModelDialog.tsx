@@ -135,6 +135,29 @@ export default function CreateModelDialog({ manufacturers }: { manufacturers: { 
                                     </div>
                                 </div>
 
+                                <div className="grid gap-1.5">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <Layers className="h-3.5 w-3.5 text-gray-400" /> Condition / Status
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            name="status"
+                                            className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                                        >
+                                            <option value="">Select Status</option>
+                                            <option value="New">New</option>
+                                            <option value="Used">Used</option>
+                                            <option value="Unboxed-new">Unboxed-new</option>
+                                            <option value="Boxed-new">Boxed-new</option>
+                                            <option value="Damaged">Damaged</option>
+                                            <option value="Returned">Returned</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                            <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Storage Location */}
                                 <div className="grid gap-1.5 pt-2 border-t border-gray-100">
                                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">

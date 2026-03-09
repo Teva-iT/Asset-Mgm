@@ -24,3 +24,8 @@ WHERE am."ModelID" = ir."ModelID"
 AND am."DefaultLocationID" IS NULL;
 
 COMMIT;
+
+
+
+-- Add Status column to AssetModel table
+ALTER TABLE "AssetModel" ADD COLUMN IF NOT EXISTS "Status" TEXT;
