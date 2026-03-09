@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +30,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [deleteConfirmInfo, setDeleteConfirmInfo] = useState<{ id: string, name: string, assetsCount: number } | null>(null);
     const [isCheckingDeps, setIsCheckingDeps] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [forecastData, setForecastData] = useState<any[]>([]);
 
     // --- Search & Filter State ---
@@ -69,44 +69,60 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
             .catch(err => console.error("Failed to fetch forecast:", err));
     }, []);
 
-    async function handleClone(modelId: string) {
+    function handleClone(modelId: string) {
         setCloningId(modelId);
-        const res = await duplicateModel(modelId);
-        if (res.success) {
-            router.refresh();
-        } else {
-            alert("Failed to clone model");
-        }
-        setCloningId(null);
+        startTransition(async () => {
+            const res = await duplicateModel(modelId);
+            if (res.success) {
+                router.refresh();
+            } else {
+                alert("Failed to clone model");
+            }
+            setCloningId(null);
+        });
     }
 
-    async function handleDeleteClick(modelId: string, modelName: string) {
+    function handleDeleteClick(modelId: string, modelName: string) {
         setIsCheckingDeps(true);
         setOpenDropdownId(null);
-        const res = await checkModelDependencies(modelId);
-        setIsCheckingDeps(false);
 
-        if (res.success) {
-            setDeleteConfirmInfo({ id: modelId, name: modelName, assetsCount: res.count as number });
-        } else {
-            alert("Failed to check dependencies.");
-        }
+        startTransition(async () => {
+            try {
+                const res = await checkModelDependencies(modelId);
+                if (res.success) {
+                    setDeleteConfirmInfo({ id: modelId, name: modelName, assetsCount: res.count as number });
+                } else {
+                    alert("Failed to check dependencies.");
+                }
+            } catch (err) {
+                alert("Failed to check dependencies due to a server error.");
+            } finally {
+                setIsCheckingDeps(false);
+            }
+        });
     }
 
-    async function handleConfirmDelete(force: boolean = false) {
+    function handleConfirmDelete(force: boolean = false) {
         if (!deleteConfirmInfo) return;
 
         const { id, name } = deleteConfirmInfo;
         setDeletingId(id);
 
-        const res = await deleteModel(id, force);
-        if (res.success) {
-            setDeleteConfirmInfo(null);
-            router.refresh();
-        } else {
-            alert(res.error || "Failed to delete model.");
-        }
-        setDeletingId(null);
+        startTransition(async () => {
+            try {
+                const res = await deleteModel(id, force);
+                if (res.success) {
+                    setDeleteConfirmInfo(null);
+                    router.refresh();
+                } else {
+                    alert(res.error || "Failed to delete model.");
+                }
+            } catch (err) {
+                alert("Failed to delete model due to a server error.");
+            } finally {
+                setDeletingId(null);
+            }
+        });
     }
 
     // --- Derived Data for Filters ---
