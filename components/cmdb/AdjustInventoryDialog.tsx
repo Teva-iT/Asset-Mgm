@@ -31,9 +31,6 @@ export default function AdjustInventoryDialog({
     const [error, setError] = useState("");
     const [newStock, setNewStock] = useState<number>(model.TotalStock || 0);
 
-    const [locationId, setLocationId] = useState("");
-    const [locationError, setLocationError] = useState("");
-
     const currentStock = model.TotalStock || 0;
     const diff = newStock - currentStock;
     const diffLabel = diff > 0 ? `+${diff}` : `${diff}`;
@@ -43,26 +40,17 @@ export default function AdjustInventoryDialog({
 
     function resetForm() {
         setNewStock(model.TotalStock || 0);
-        setLocationId("");
-        setLocationError("");
         setError("");
     }
 
     async function formAction(formData: FormData) {
         setError("");
-        setLocationError("");
-
-        if (!locationId) {
-            setLocationError("Storage Location is required.");
-            return;
-        }
 
         setIsSubmitting(true);
         formData.set("modelId", model.ModelID);
         formData.set("currentStock", String(currentStock));
         formData.set("newStock", String(newStock));
         formData.set("difference", String(diff));
-        formData.set("storageLocationId", locationId);
 
         startTransition(async () => {
             try {
@@ -160,24 +148,6 @@ export default function AdjustInventoryDialog({
                                 />
                             </div>
 
-                            {/* Storage Location */}
-                            <div className="grid gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                                    Storage Location (Warehouse / Room) <span className="text-red-500">*</span>
-                                </label>
-                                <StorageLocationSelect
-                                    value={locationId}
-                                    onChange={(val) => {
-                                        setLocationId(val);
-                                        if (val) setLocationError("");
-                                    }}
-                                    error={locationError}
-                                />
-                                {locationError && (
-                                    <p className="text-red-500 text-xs">{locationError}</p>
-                                )}
-                            </div>
 
                             {/* Reason */}
                             <div className="grid gap-1.5">

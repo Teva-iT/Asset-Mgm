@@ -21,37 +21,23 @@ export default function AddStockDialog({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    // ✅ Controlled state for Storage Location
-    const [locationId, setLocationId] = useState("");
-    const [locationError, setLocationError] = useState("");
-
     useEscapeKey(() => {
         setOpen(false);
         resetForm();
     }, open);
 
     function resetForm() {
-        setLocationId("");
-        setLocationError("");
         setError("");
     }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
-        setLocationError("");
-
-        // ✅ Storage Location required validation
-        if (!locationId) {
-            setLocationError("Storage Location is required.");
-            return;
-        }
 
         setIsSubmitting(true);
 
         const formData = new FormData(e.currentTarget);
         formData.set("modelId", model.ModelID);
-        formData.set("storageLocationId", locationId);
 
         try {
             const res = await addStockAction(formData);
@@ -150,24 +136,6 @@ export default function AddStockDialog({
                                 />
                             </div>
 
-                            {/* ✅ Storage Location — required, controlled via state */}
-                            <div className="grid gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                                    Storage Location (Warehouse / Room) <span className="text-red-500">*</span>
-                                </label>
-                                <StorageLocationSelect
-                                    value={locationId}
-                                    onChange={(val) => {
-                                        setLocationId(val);
-                                        if (val) setLocationError("");
-                                    }}
-                                    error={locationError}
-                                />
-                                {locationError && (
-                                    <p className="text-red-500 text-xs">{locationError}</p>
-                                )}
-                            </div>
 
                             {/* Notes */}
                             <div className="grid gap-1.5">

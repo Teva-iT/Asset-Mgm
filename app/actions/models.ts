@@ -255,7 +255,7 @@ export async function addStockAction(formData: FormData) {
     try {
         const { data: model, error: fetchError } = await supabase
             .from("AssetModel")
-            .select("TotalStock, AvailableStock")
+            .select("TotalStock, AvailableStock, DefaultLocationID")
             .eq("ModelID", modelId)
             .single();
 
@@ -264,12 +264,15 @@ export async function addStockAction(formData: FormData) {
         const newTotalStock = (model.TotalStock || 0) + quantity;
         const newAvailableStock = (model.AvailableStock || 0) + quantity;
 
+        // Use provided location or fall back to model's default
+        const effectiveLocationId = storageLocationId || model.DefaultLocationID;
+
         const { error: updateError } = await supabase
             .from("AssetModel")
             .update({
                 TotalStock: newTotalStock,
                 AvailableStock: newAvailableStock,
-                DefaultLocationID: storageLocationId,
+                DefaultLocationID: effectiveLocationId,
                 updatedAt: new Date().toISOString()
             })
             .eq("ModelID", modelId);
@@ -284,7 +287,7 @@ export async function addStockAction(formData: FormData) {
                 Quantity: quantity,
                 ActionType: "ADD",
                 PurchaseDate: purchaseDate,
-                StorageLocationID: storageLocationId,
+                StorageLocationID: effectiveLocationId,
                 Notes: notes,
                 CreatedAt: new Date().toISOString()
             });
@@ -310,7 +313,7 @@ export async function adjustStockAction(formData: FormData) {
     const reason = formData.get("reason")?.toString() || "adjustment";
     const notes = formData.get("notes")?.toString() || null;
 
-    if (!modelId || newStockStr === undefined || differenceStr === undefined || !storageLocationId) {
+    if (!modelId || newStockStr === undefined || differenceStr === undefined) {
         return { success: false, error: "Missing required fields" };
     }
 
@@ -324,7 +327,7 @@ export async function adjustStockAction(formData: FormData) {
     try {
         const { data: model, error: fetchError } = await supabase
             .from("AssetModel")
-            .select("TotalStock, AvailableStock, AssignedStock")
+            .select("TotalStock, AvailableStock, AssignedStock, DefaultLocationID")
             .eq("ModelID", modelId)
             .single();
 
@@ -335,12 +338,15 @@ export async function adjustStockAction(formData: FormData) {
             const assignedStock = model.AssignedStock || 0;
             const newAvailable = Math.max(0, newStock - assignedStock);
 
+            // Use provided location or fall back to model's default
+            const effectiveLocationId = storageLocationId || model.DefaultLocationID;
+
             const { error: updateError } = await supabase
                 .from("AssetModel")
                 .update({
                     TotalStock: newStock,
                     AvailableStock: newAvailable,
-                    DefaultLocationID: storageLocationId,
+                    DefaultLocationID: effectiveLocationId,
                     updatedAt: new Date().toISOString()
                 })
                 .eq("ModelID", modelId);
@@ -350,12 +356,14 @@ export async function adjustStockAction(formData: FormData) {
 
         // Log the adjustment (includes location-only changes)
         const actionType = difference === 0 ? "LOCATION_CHANGE" : "ADJUST";
+        const effectiveLocationId = storageLocationId || model.DefaultLocationID;
+
         await supabase.from("InventoryRecord").insert({
             RecordID: crypto.randomUUID(),
             ModelID: modelId,
             Quantity: difference,
             ActionType: actionType,
-            StorageLocationID: storageLocationId,
+            StorageLocationID: effectiveLocationId,
             Notes: `Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
             CreatedAt: new Date().toISOString()
         });
