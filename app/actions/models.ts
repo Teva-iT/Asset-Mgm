@@ -127,6 +127,8 @@ export async function createModelAction(formData: FormData) {
             Series: series,
             ManufacturerID: manufacturerId,
             Category: category,
+            Color: formData.get("color")?.toString() || null,
+            ImageURL: formData.get("imageUrl")?.toString() || null,
             Status: formData.get("status")?.toString() || null,
             DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,
             updatedAt: new Date().toISOString()
@@ -164,6 +166,8 @@ export async function updateModelAction(modelId: string, formData: FormData) {
             Series: series,
             ManufacturerID: manufacturerId,
             Category: category,
+            Color: formData.get("color")?.toString() || null,
+            ImageURL: formData.get("imageUrl")?.toString() || null,
             Status: formData.get("status")?.toString() || null,
             ReorderLevel: reorderLevel,
             DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,

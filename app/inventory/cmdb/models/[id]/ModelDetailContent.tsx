@@ -134,34 +134,52 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">{model.Name}</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">{model.Manufacturer?.Name} · {model.Category}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                        {model.Manufacturer?.Name} · {model.Category}
+                        {model.Color && (
+                            <>
+                                <span className="mx-2 text-gray-300">|</span>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full border border-gray-400" style={{ backgroundColor: model.Color.toLowerCase() }} />
+                                    {model.Color}
+                                </span>
+                            </>
+                        )}
+                    </p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${stockStatus.color}`}>
                     {stockStatus.dot} {stockStatus.label}
                 </span>
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                    { label: "Total Stock", value: model.TotalStock || 0, color: "text-gray-900", icon: Package },
-                    { label: "Available", value: model.AvailableStock || 0, color: "text-green-600", icon: TrendingUp },
-                    { label: "Assigned", value: model.AssignedStock || 0, color: "text-blue-600", icon: BarChart2 },
-                    {
-                        label: "Last Update",
-                        value: history.length > 0 ? new Date(history[history.length - 1].CreatedAt).toLocaleDateString("en-GB", { day: '2-digit', month: 'short' }) : "Never",
-                        color: "text-orange-500",
-                        icon: History
-                    },
-                ].map(({ label, value, color, icon: Icon }) => (
-                    <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-gray-500">{label}</span>
-                            <Icon className={`h-4 w-4 ${color}`} />
-                        </div>
-                        <span className={`text-2xl font-bold ${color}`}>{value}</span>
+            {/* Model Image and Stats */}
+            <div className="flex flex-col md:flex-row gap-6">
+                {model.ImageURL && (
+                    <div className="w-full md:w-64 aspect-square bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
+                        <img src={model.ImageURL} alt={model.Name} className="w-full h-full object-contain p-2" />
                     </div>
-                ))}
+                )}
+                <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 self-start">
+                    {[
+                        { label: "Total Stock", value: model.TotalStock || 0, color: "text-gray-900", icon: Package },
+                        { label: "Available", value: model.AvailableStock || 0, color: "text-green-600", icon: TrendingUp },
+                        { label: "Assigned", value: model.AssignedStock || 0, color: "text-blue-600", icon: BarChart2 },
+                        {
+                            label: "Last Update",
+                            value: history.length > 0 ? new Date(history[history.length - 1].CreatedAt).toLocaleDateString("en-GB", { day: '2-digit', month: 'short' }) : "Never",
+                            color: "text-orange-500",
+                            icon: History
+                        },
+                    ].map(({ label, value, color, icon: Icon }) => (
+                        <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-gray-500">{label}</span>
+                                <Icon className={`h-4 w-4 ${color}`} />
+                            </div>
+                            <span className={`text-2xl font-bold ${color}`}>{value}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Chart */}

@@ -29,3 +29,7 @@ COMMIT;
 
 -- Add Status column to AssetModel table
 ALTER TABLE "AssetModel" ADD COLUMN IF NOT EXISTS "Status" TEXT;
+
+-- Add Color column to AssetModel
+ALTER TABLE "AssetModel" ADD COLUMN IF NOT EXISTS "Color" TEXT;
+
