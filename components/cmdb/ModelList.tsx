@@ -24,7 +24,7 @@ function getStockStatus(available: number, reorderLevel: number): {
 }
 
 
-export default function ModelList({ models, manufacturers }: { models: any[], manufacturers: any[] }) {
+export default function ModelList({ models, manufacturers, locations = [] }: { models: any[], manufacturers: any[], locations?: any[] }) {
     const router = useRouter();
     const [cloningId, setCloningId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -137,7 +137,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
         { value: "Accessory", label: "Accessory" },
     ];
     const manufacturerNames = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort() as string[];
-    const storageLocations = Array.from(new Set(models.flatMap(m => m.locations || []))).filter(Boolean).sort() as string[];
+    const storageLocations = Array.from(new Set(locations.map(l => l.Name))).filter(Boolean).sort() as string[];
 
     // --- Apply Filters ---
     const filteredModels = models.filter(m => {

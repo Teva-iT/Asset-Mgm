@@ -1,20 +1,21 @@
-
 import { getAssetModels } from "@/app/actions/models";
 import { getManufacturers } from "@/app/actions/manufacturer";
+import { getStorageLocations } from "@/app/actions/storage";
 import ModelList from "@/components/cmdb/ModelList";
 
 export const dynamic = 'force-dynamic';
 
 export default async function ModelsPage() {
     // Fetch data in parallel for better performance
-    const [models, manufacturers] = await Promise.all([
+    const [models, manufacturers, locations] = await Promise.all([
         getAssetModels(),
-        getManufacturers()
+        getManufacturers(),
+        getStorageLocations()
     ]);
 
     return (
         <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
-            <ModelList models={models} manufacturers={manufacturers} />
+            <ModelList models={models} manufacturers={manufacturers} locations={locations} />
         </div>
     );
 }
