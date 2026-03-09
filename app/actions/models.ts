@@ -37,8 +37,13 @@ export async function getAssetModels() {
             const assetList = assets.filter((a: any) => a.ModelID === m.ModelID);
             const assetCount = assetList.length;
 
+            // Use DefaultLocationID if set, otherwise fallback to finding any associated location
+            const defaultLocName = m.DefaultLocationID ? locMap[m.DefaultLocationID] : null;
+
             // Gather all distinct location IDs from both assets and inventory records for this model
             const modelLocIds = new Set<string>();
+
+            if (m.DefaultLocationID) modelLocIds.add(m.DefaultLocationID);
 
             assetList.forEach((a: any) => {
                 if (a.StorageLocationID) modelLocIds.add(a.StorageLocationID);
@@ -55,6 +60,7 @@ export async function getAssetModels() {
             return {
                 ...m,
                 Manufacturer: manufacturer,
+                DefaultLocationName: defaultLocName,
                 locations: modelLocationNames,
                 _count: {
                     assets: assetCount
@@ -121,6 +127,7 @@ export async function createModelAction(formData: FormData) {
             Series: series,
             ManufacturerID: manufacturerId,
             Category: category,
+            DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,
             updatedAt: new Date().toISOString()
         });
 
@@ -157,6 +164,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
             ManufacturerID: manufacturerId,
             Category: category,
             ReorderLevel: reorderLevel,
+            DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,
             updatedAt: new Date().toISOString()
         }).eq('ModelID', modelId);
 
@@ -261,6 +269,7 @@ export async function addStockAction(formData: FormData) {
             .update({
                 TotalStock: newTotalStock,
                 AvailableStock: newAvailableStock,
+                DefaultLocationID: storageLocationId,
                 updatedAt: new Date().toISOString()
             })
             .eq("ModelID", modelId);
@@ -331,6 +340,7 @@ export async function adjustStockAction(formData: FormData) {
                 .update({
                     TotalStock: newStock,
                     AvailableStock: newAvailable,
+                    DefaultLocationID: storageLocationId,
                     updatedAt: new Date().toISOString()
                 })
                 .eq("ModelID", modelId);

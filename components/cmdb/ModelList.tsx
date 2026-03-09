@@ -5,7 +5,7 @@ import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actio
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings, X } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings, X, MapPin } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
@@ -401,6 +401,7 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                             <th className="h-12 px-4 align-middle font-medium w-[20%] min-w-[150px]">Series</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Manufacturer</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[120px]">Category</th>
+                            <th className="h-12 px-4 align-middle font-medium min-w-[150px]">Location</th>
                             <th className="h-12 px-4 align-middle font-medium text-center min-w-[80px]">Stock</th>
                             <th className="h-12 px-4 align-middle font-medium text-center min-w-[100px]">Status</th>
                             <th className="h-12 px-4 align-middle font-medium min-w-[100px]">Active Devices</th>
@@ -477,6 +478,14 @@ export default function ModelList({ models, manufacturers }: { models: any[], ma
                                         <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary hover:bg-primary/20">
                                             {m.Category}
                                         </span>
+                                    </td>
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-1.5">
+                                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                            <span className={`text-sm ${m.DefaultLocationName ? 'text-gray-900 font-medium' : 'text-gray-400 italic'}`}>
+                                                {m.DefaultLocationName || "Not Set"}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="p-4 text-center">
                                         <div className="flex flex-col items-center justify-center">

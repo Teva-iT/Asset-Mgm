@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Edit2, Box, Layers, Tag, X, GitBranch, Bell } from "lucide-react";
+import { Edit2, Box, Layers, Tag, X, GitBranch, Bell, MapPin } from "lucide-react";
 import { updateModelAction } from "@/app/actions/models";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import StorageLocationSelect from "@/components/StorageLocationSelect";
 
 export default function EditModelDialog({
     model,
@@ -19,10 +20,14 @@ export default function EditModelDialog({
 }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
+    const [locationId, setLocationId] = useState(model.DefaultLocationID || "");
 
     useEscapeKey(() => setOpen(false), open);
 
     async function handleSubmit(formData: FormData) {
+        if (locationId) {
+            formData.set("defaultLocationId", locationId);
+        }
         const res = await updateModelAction(model.ModelID, formData);
         if (res.success) {
             setOpen(false);
@@ -167,6 +172,19 @@ export default function EditModelDialog({
                                     className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                                 />
                                 <p className="text-xs text-gray-400">Alert will trigger when Available Stock ≤ this number. Set to 0 to disable.</p>
+                            </div>
+
+                            {/* Storage Location */}
+                            <div className="grid gap-1.5 pt-2 border-t border-gray-100">
+                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <MapPin className="h-3.5 w-3.5 text-gray-400" /> Default Storage Location
+                                </label>
+                                <StorageLocationSelect
+                                    value={locationId}
+                                    onChange={(val) => setLocationId(val)}
+                                />
+                                <input type="hidden" name="defaultLocationId" value={locationId} />
+                                <p className="text-xs text-gray-400">The primary warehouse or room where this model is kept.</p>
                             </div>
 
                             {/* Actions */}

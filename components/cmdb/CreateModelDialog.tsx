@@ -3,17 +3,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Box, Layers, Tag, X, GitBranch } from "lucide-react";
 import { createModelAction } from "@/app/actions/models";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import StorageLocationSelect from "@/components/StorageLocationSelect";
+import { Plus, Box, Layers, Tag, X, GitBranch, MapPin } from "lucide-react";
 
 export default function CreateModelDialog({ manufacturers }: { manufacturers: { ManufacturerID: string, Name: string }[] }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
+    const [locationId, setLocationId] = useState("");
 
     useEscapeKey(() => setOpen(false), open);
 
     async function handleSubmit(formData: FormData) {
+        if (locationId) {
+            formData.set("defaultLocationId", locationId);
+        }
         const res = await createModelAction(formData);
         if (res.success) {
             setOpen(false);
@@ -128,6 +133,19 @@ export default function CreateModelDialog({ manufacturers }: { manufacturers: { 
                                             <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Storage Location */}
+                                <div className="grid gap-1.5 pt-2 border-t border-gray-100">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <MapPin className="h-3.5 w-3.5 text-gray-400" /> Default Storage Location
+                                    </label>
+                                    <StorageLocationSelect
+                                        value={locationId}
+                                        onChange={(val) => setLocationId(val)}
+                                    />
+                                    <input type="hidden" name="defaultLocationId" value={locationId} />
+                                    <p className="text-xs text-gray-400">The primary warehouse or room where this model is kept.</p>
                                 </div>
                             </div>
 

@@ -5,3 +5,5 @@ ALTER TABLE "InventoryRecord"
 ADD CONSTRAINT "InventoryRecord_ModelID_fkey"
 FOREIGN KEY ("ModelID") REFERENCES "AssetModel"("ModelID")
 ON DELETE CASCADE;
+
+
