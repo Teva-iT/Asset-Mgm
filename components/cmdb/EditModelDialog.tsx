@@ -192,17 +192,32 @@ export default function EditModelDialog({
                                 </div>
 
                                 {category === "Consumable" && (
-                                    <div className="grid gap-1.5 animate-in fade-in slide-in-from-top-1">
+                                    <div className="grid gap-2 animate-in fade-in slide-in-from-top-1">
                                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full border border-gray-300 bg-gradient-to-tr from-cyan-400 via-magenta-400 to-yellow-400" /> Color / Toner Type
                                         </label>
-                                        <input
-                                            name="color"
-                                            value={color}
-                                            onChange={(e) => setColor(e.target.value)}
-                                            placeholder="e.g. Black, Cyan, Magenta, Yellow"
-                                            className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-300"
-                                        />
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { name: 'Black', bg: 'bg-[#000000]' },
+                                                { name: 'Cyan', bg: 'bg-[#00FFFF]' },
+                                                { name: 'Magenta', bg: 'bg-[#FF00FF]' },
+                                                { name: 'Yellow', bg: 'bg-[#FFFF00]' }
+                                            ].map((c) => (
+                                                <button
+                                                    key={c.name}
+                                                    type="button"
+                                                    onClick={() => setColor(c.name)}
+                                                    className={`group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${color === c.name
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                                        }`}
+                                                >
+                                                    <div className={`w-3.5 h-3.5 rounded-full border border-black/10 ${c.bg}`} />
+                                                    <span className="text-xs font-medium">{c.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <input type="hidden" name="color" value={color} />
                                     </div>
                                 )}
 
