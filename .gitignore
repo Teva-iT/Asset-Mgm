@@ -11,3 +11,4 @@ server_debug.log
 public/uploads/
 supabase/.temp
 
+verify_location_fix_standalone.js
