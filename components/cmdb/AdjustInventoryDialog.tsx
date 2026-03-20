@@ -74,8 +74,7 @@ export default function AdjustInventoryDialog({
             {variant === "dropdown" ? (
                 <button
                     onClick={() => { setOpen(true); resetForm(); }}
-                    disabled={(model.TotalStock || 0) === 0}
-                    title={(model.TotalStock || 0) === 0 ? "Cannot adjust zero stock. Use Add Stock instead." : triggerLabel}
+                    title={triggerLabel}
                     className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
                     <SlidersHorizontal className="h-4 w-4 text-orange-500" />
@@ -84,9 +83,8 @@ export default function AdjustInventoryDialog({
             ) : (
                 <button
                     onClick={() => { setOpen(true); resetForm(); }}
-                    disabled={(model.TotalStock || 0) === 0}
                     className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-orange-50 text-orange-700 hover:bg-orange-100 h-8 px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={(model.TotalStock || 0) === 0 ? "Cannot adjust zero stock. Use Add Stock instead." : "Adjust Inventory"}
+                    title="Adjust Inventory"
                 >
                     <SlidersHorizontal className="h-4 w-4 mr-1" />
                     Adjust
