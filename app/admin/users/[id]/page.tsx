@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -181,7 +182,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                                 <div className="flex items-center gap-4">
                                     <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200 overflow-hidden shrink-0">
                                         {avatarUrl ? (
-                                            <img src={avatarUrl} alt="Preview" className="h-full w-full object-cover" />
+                                            <Image src={avatarUrl} alt="Preview" fill unoptimized sizes="64px" className="h-full w-full object-cover" />
                                         ) : (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
                                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>

@@ -119,18 +119,14 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    UPDATE "InventoryAlert"
-    SET
-        "Status" = v_status,
-        "CurrentStock" = NEW."AvailableStock",
-        "ThresholdAtTrigger" = v_low_threshold,
-        "UpdatedAt" = now()
-    WHERE "ModelID" = NEW."ModelID" AND "IsResolved" = false;
-
-    IF NOT FOUND THEN
-        INSERT INTO "InventoryAlert" ("ModelID", "Status", "CurrentStock", "ThresholdAtTrigger", "IsResolved")
-        VALUES (NEW."ModelID", v_status, NEW."AvailableStock", v_low_threshold, false);
-    END IF;
+    INSERT INTO "InventoryAlert" ("ModelID", "Status", "CurrentStock", "ThresholdAtTrigger", "IsResolved")
+    VALUES (NEW."ModelID", v_status, NEW."AvailableStock", v_low_threshold, false)
+    ON CONFLICT ("ModelID") WHERE "IsResolved" = false
+    DO UPDATE SET
+        "Status" = EXCLUDED."Status",
+        "CurrentStock" = EXCLUDED."CurrentStock",
+        "ThresholdAtTrigger" = EXCLUDED."ThresholdAtTrigger",
+        "UpdatedAt" = now();
 
     RETURN NEW;
 END;

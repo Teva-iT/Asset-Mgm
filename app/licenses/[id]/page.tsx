@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -33,17 +33,17 @@ export default function LicenseDetailPage({ params }: { params: { id: string } }
     const [assigning, setAssigning] = useState(false)
     const [error, setError] = useState('')
 
-    const load = () => {
+    const load = useCallback(() => {
         fetch(`/api/licenses/${params.id}`).then(r => r.json()).then(data => {
             setLicense(data)
             setLoading(false)
         })
-    }
+    }, [params.id])
 
     useEffect(() => {
         load()
         fetch('/api/employees').then(r => r.json()).then(data => setEmployees(Array.isArray(data) ? data : []))
-    }, [])
+    }, [load])
 
     async function handleAssign() {
         if (!selectedEmployee) return

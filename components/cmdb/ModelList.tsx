@@ -4,8 +4,9 @@ import { useState, useEffect, useTransition } from "react";
 import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 
-import { Copy, Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus, Search, Filter, ChevronDown, RefreshCcw, MoreHorizontal, Settings, X, MapPin } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, UserPlus, Search, Filter, ChevronDown, RefreshCcw, Settings, X, MapPin, FileSpreadsheet, FileText } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
@@ -21,6 +22,18 @@ function getStockStatus(available: number, reorderLevel: number): {
     if (available <= 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-700 border-red-200', icon: '🔴', tooltip: 'No units available' };
     if (reorderLevel > 0 && available <= reorderLevel) return { label: `Low Stock (${available} left)`, color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🟡', tooltip: `Below reorder level of ${reorderLevel}` };
     return { label: 'Stock OK', color: 'bg-green-100 text-green-700 border-green-200', icon: '🟢', tooltip: 'Stock is sufficient' };
+}
+
+function normalizeFilePart(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function csvEscape(value: unknown) {
+    const stringValue = value == null ? "" : String(value);
+    if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
 }
 
 
@@ -178,6 +191,85 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
 
     const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterLocation !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0) + (filterColor !== "All" ? 1 : 0);
 
+    const exportRows = filteredModels.map((m) => {
+        const stockStatus = getStockStatus(m.AvailableStock || 0, m.ReorderLevel || 0);
+
+        return {
+            "Model Name": m.Name || "",
+            "Model Number": m.ModelNumber || "",
+            "Series": m.Series || "",
+            "Manufacturer": m.Manufacturer?.Name || "",
+            "Category": m.Category || "",
+            "Color": m.Color || "",
+            "Location": m.DefaultLocationName || "",
+            "Available Stock": m.AvailableStock || 0,
+            "Assigned Stock": m.AssignedStock || 0,
+            "Total Stock": (m.AvailableStock || 0) + (m.AssignedStock || 0),
+            "Stock Status": stockStatus.label,
+            "Condition": m.Status || "",
+            "Active Devices": m._count?.assets || 0,
+        };
+    });
+
+    function buildExportFileName(extension: "csv" | "xlsx") {
+        const parts = ["asset-models"];
+
+        if (filterCategory !== "All") parts.push(normalizeFilePart(filterCategory));
+        if (filterManufacturer !== "All") parts.push(normalizeFilePart(filterManufacturer));
+        if (filterLocation !== "All") parts.push(normalizeFilePart(filterLocation));
+        if (filterStatus !== "All") parts.push(normalizeFilePart(filterStatus));
+        if (filterColor !== "All") parts.push(normalizeFilePart(filterColor));
+        if (searchQuery.trim()) parts.push("filtered");
+
+        return `${parts.join("-") || "asset-models"}.${extension}`;
+    }
+
+    function downloadBlob(blob: Blob, fileName: string) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportAsCsv() {
+        if (exportRows.length === 0) {
+            alert("No filtered models available to export.");
+            return;
+        }
+
+        const headers = Object.keys(exportRows[0]);
+        const csvLines = [
+            headers.map(csvEscape).join(","),
+            ...exportRows.map((row) => headers.map((header) => csvEscape(row[header as keyof typeof row])).join(",")),
+        ];
+
+        downloadBlob(
+            new Blob([`\uFEFF${csvLines.join("\n")}`], { type: "text/csv;charset=utf-8;" }),
+            buildExportFileName("csv")
+        );
+    }
+
+    function exportAsExcel() {
+        if (exportRows.length === 0) {
+            alert("No filtered models available to export.");
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(exportRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Models");
+
+        const arrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        downloadBlob(
+            new Blob([arrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+            buildExportFileName("xlsx")
+        );
+    }
+
     function clearFilters() {
         setSearchQuery("");
         setFilterCategory("All");
@@ -298,6 +390,29 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                     </div>
 
                     <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={exportAsCsv}
+                                disabled={filteredModels.length === 0}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Export filtered rows as CSV"
+                            >
+                                <FileText className="h-4 w-4" />
+                                CSV
+                            </button>
+                            <button
+                                type="button"
+                                onClick={exportAsExcel}
+                                disabled={filteredModels.length === 0}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Export filtered rows as Excel"
+                            >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Excel
+                            </button>
+                        </div>
+
                         {/* Filter Toggle */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}

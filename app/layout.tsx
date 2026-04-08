@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import './globals.css'
 import NavBar from '@/components/NavBar'
@@ -27,7 +28,7 @@ export default async function RootLayout({
                     {/* Left: Logo */}
                     <div className="flex-shrink-0 flex items-center gap-2">
                         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <img src="/logo.jpg" alt="Logo" className="h-8 w-auto object-contain" />
+                            <Image src="/logo.jpg" alt="Logo" width={96} height={32} priority className="h-8 w-auto object-contain" />
                             <span className="font-bold text-gray-800 md:hidden lg:block hidden">AssetMgr</span>
                         </Link>
                     </div>

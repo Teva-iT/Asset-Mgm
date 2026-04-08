@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -40,14 +41,17 @@ export default function LoginPage() {
             {/* Left Side: Image Box */}
             <div className="hidden lg:flex w-1/2 bg-gray-100 items-center justify-center p-12 relative overflow-hidden">
                 <div className="absolute inset-0 z-0">
-                    <img
+                    <Image
                         src="/logo.jpg"
                         alt="Background"
+                        fill
+                        priority
+                        sizes="50vw"
                         className="w-full h-full object-cover opacity-20 blur-sm scale-110"
                     />
                 </div>
                 <div className="z-10 bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-white/50 max-w-md w-full text-center">
-                    <img src="/logo.jpg" alt="Logo" className="h-24 mx-auto mb-6 object-contain" />
+                    <Image src="/logo.jpg" alt="Logo" width={192} height={96} priority className="h-24 w-auto mx-auto mb-6 object-contain" />
                     <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
                     <p className="text-gray-600">
                         Sign in to access your Asset Manager dashboard and manage company resources efficiently.

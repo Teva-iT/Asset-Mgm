@@ -19,7 +19,8 @@ interface License {
 
 function ExpiryBadge({ date }: { date: string | null }) {
     if (!date) return <span className="text-gray-400 text-xs">No expiry</span>
-    const days = Math.ceil((new Date(date).getTime() - Date.now()) / 86400000)
+    const nowMs = new Date().setHours(0, 0, 0, 0)
+    const days = Math.ceil((new Date(date).getTime() - nowMs) / 86400000)
     if (days < 0) return <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Expired {Math.abs(days)}d ago</span>
     if (days <= 30) return <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">⚠️ {days}d left</span>
     if (days <= 90) return <span className="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">{days}d left</span>
@@ -61,9 +62,10 @@ export default function LicensesPage() {
     )
 
     const totalCost = licenses.reduce((s, l) => s + (l.CostPerYear || 0), 0)
+    const nowMs = new Date().setHours(0, 0, 0, 0)
     const expiringSoon = licenses.filter(l => {
         if (!l.ExpiryDate) return false
-        const d = Math.ceil((new Date(l.ExpiryDate).getTime() - Date.now()) / 86400000)
+        const d = Math.ceil((new Date(l.ExpiryDate).getTime() - nowMs) / 86400000)
         return d >= 0 && d <= 30
     }).length
     const overAllocated = licenses.filter(l => l.isOverAllocated).length

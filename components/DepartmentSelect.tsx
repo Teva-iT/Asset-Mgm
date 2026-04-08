@@ -28,17 +28,21 @@ export default function DepartmentSelect({ value, onChange, departments, placeho
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus()
-            setSearchTerm('')
-        }
-    }, [isOpen])
-
     const handleSelect = (deptName: string) => {
         onChange(deptName)
         setIsOpen(false)
         setSearchTerm('')
+    }
+
+    const toggleOpen = () => {
+        if (isOpen) {
+            setIsOpen(false)
+            return
+        }
+
+        setSearchTerm('')
+        setIsOpen(true)
+        requestAnimationFrame(() => inputRef.current?.focus())
     }
 
     const selectedName = value || ''
@@ -50,7 +54,7 @@ export default function DepartmentSelect({ value, onChange, departments, placeho
     return (
         <div className={`relative ${className}`} ref={wrapperRef}>
             <div
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 className="filter-control cursor-pointer justify-between bg-white border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm"
             >
                 <div className="flex items-center gap-2 overflow-hidden flex-1">

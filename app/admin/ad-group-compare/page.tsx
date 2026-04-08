@@ -49,8 +49,7 @@ function UserPicker({ label, value, onSelect }: { label: string; value: ADUser |
     }, [])
 
     useEffect(() => {
-        if (!dq.trim() || dq.length < 2) { setResults([]); return }
-        setLoading(true)
+        if (!dq.trim() || dq.length < 2) return
         fetch(`/api/ad/users/search?q=${encodeURIComponent(dq)}`)
             .then(r => r.json()).then(d => setResults(Array.isArray(d) ? d : []))
             .catch(() => setResults([])).finally(() => setLoading(false))
@@ -74,7 +73,17 @@ function UserPicker({ label, value, onSelect }: { label: string; value: ADUser |
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     <input className="input-field pl-9" placeholder="Search AD user..." value={query}
-                        onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} />
+                        onChange={e => {
+                            const nextQuery = e.target.value
+                            setQuery(nextQuery)
+                            setOpen(true)
+                            if (!nextQuery.trim() || nextQuery.length < 2) {
+                                setResults([])
+                                setLoading(false)
+                            } else {
+                                setLoading(true)
+                            }
+                        }} onFocus={() => setOpen(true)} />
                     {open && query.length >= 2 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-52 overflow-y-auto">
                             {loading ? <div className="px-4 py-5 text-center text-sm text-gray-400">Searching AD...</div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
 import { ArrowLeft, Package, TrendingUp, BarChart2, History, Plus, Minus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -155,8 +156,8 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
             {/* Model Image and Stats */}
             <div className="flex flex-col md:flex-row gap-6">
                 {model.ImageURL && (
-                    <div className="w-full md:w-64 aspect-square bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
-                        <img src={model.ImageURL} alt={model.Name} className="w-full h-full object-contain p-2" />
+                    <div className="relative w-full md:w-64 aspect-square bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
+                        <Image src={model.ImageURL} alt={model.Name} fill unoptimized sizes="(max-width: 768px) 100vw, 256px" className="w-full h-full object-contain p-2" />
                     </div>
                 )}
                 <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 self-start">

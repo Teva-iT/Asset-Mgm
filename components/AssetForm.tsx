@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -691,7 +692,7 @@ export default function AssetForm({ asset, currentUser, admins = [] }: { asset?:
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     {photos.map((photo, index) => (
                         <div key={index} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden border">
-                            <img src={photo.URL} alt="Asset" className="w-full h-full object-cover" />
+                            <Image src={photo.URL} alt="Asset" fill unoptimized sizes="(max-width: 768px) 50vw, 25vw" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                 <span className="text-white text-xs bg-black/50 px-2 py-1 rounded">{photo.Category}</span>
                             </div>

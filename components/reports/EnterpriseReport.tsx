@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 import * as XLSX from 'xlsx'
 import DepartmentSelect from '../DepartmentSelect'
@@ -81,11 +81,7 @@ export default function EnterpriseReport() {
         }
     }
 
-    useEffect(() => {
-        fetchReport()
-    }, [department, status, dateRange])
-
-    async function fetchReport() {
+    const fetchReport = useCallback(async () => {
         setLoading(true)
         const params = new URLSearchParams()
         if (department) params.append('department', department)
@@ -106,7 +102,11 @@ export default function EnterpriseReport() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [department, status, dateRange])
+
+    useEffect(() => {
+        fetchReport()
+    }, [fetchReport])
 
     function downloadExcel() {
         if (!data) return

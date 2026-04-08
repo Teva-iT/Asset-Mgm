@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import {
     Users,
     Briefcase,
@@ -56,6 +57,5 @@ export function getIconForDepartment(dept: string) {
 }
 
 export default function DepartmentIcon({ department, className }: { department: string, className?: string }) {
-    const Icon = getIconForDepartment(department)
-    return <Icon className={className} />
+    return createElement(getIconForDepartment(department), { className })
 }

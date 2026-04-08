@@ -1,6 +1,7 @@
 
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createModelAction } from "@/app/actions/models";
@@ -207,7 +208,7 @@ export default function CreateModelDialog({ manufacturers }: { manufacturers: { 
                                     <div className="flex items-center gap-4">
                                         {imageUrl ? (
                                             <div className="relative w-20 h-20 rounded-lg border overflow-hidden group">
-                                                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <Image src={imageUrl} alt="Preview" fill unoptimized sizes="80px" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => setImageUrl("")}

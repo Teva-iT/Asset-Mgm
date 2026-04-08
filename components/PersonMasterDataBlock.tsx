@@ -37,7 +37,7 @@ export default function PersonMasterDataBlock({ state, onChange, employeeContext
                 jobTitle: employeeContext.Title || '',
             })
         }
-    }, [employeeContext])
+    }, [employeeContext, onChange, state])
 
     return (
         <div className="card shadow-sm border border-gray-200 mt-6">

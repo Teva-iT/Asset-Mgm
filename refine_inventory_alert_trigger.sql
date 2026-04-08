@@ -55,21 +55,24 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- 3. Upsert Active Alert
-    -- The unique index idx_inventory_alert_unique_active ensures we don't have duplicates.
-    -- We use ON CONFLICT to update the existing active alert instead of creating a new one.
-    INSERT INTO "InventoryAlert" (
-        "ModelID", "Status", "CurrentStock", "ThresholdAtTrigger", "IsResolved"
-    )
-    VALUES (
-        NEW."ModelID", v_status, NEW."AvailableStock", v_low_threshold, false
-    )
-    ON CONFLICT ("ModelID") WHERE "IsResolved" = false
-    DO UPDATE SET
-        "Status" = EXCLUDED."Status",
-        "CurrentStock" = EXCLUDED."CurrentStock",
-        "ThresholdAtTrigger" = EXCLUDED."ThresholdAtTrigger",
-        "CreatedAt" = now(); -- Refresh timestamp
+    -- 3. Update any active alerts first; insert only when there is no active alert yet.
+    -- This avoids requiring a UNIQUE/EXCLUSION constraint for ON CONFLICT.
+    UPDATE "InventoryAlert"
+    SET
+        "Status" = v_status,
+        "CurrentStock" = NEW."AvailableStock",
+        "ThresholdAtTrigger" = v_low_threshold,
+        "UpdatedAt" = now()
+    WHERE "ModelID" = NEW."ModelID" AND "IsResolved" = false;
+
+    IF NOT FOUND THEN
+        INSERT INTO "InventoryAlert" (
+            "ModelID", "Status", "CurrentStock", "ThresholdAtTrigger", "IsResolved"
+        )
+        VALUES (
+            NEW."ModelID", v_status, NEW."AvailableStock", v_low_threshold, false
+        );
+    END IF;
 
     RETURN NEW;
 END;

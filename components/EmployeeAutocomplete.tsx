@@ -20,12 +20,10 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
     const [query, setQuery] = useState('')
     const [results, setResults] = useState<Employee[]>([])
     const [isOpen, setIsOpen] = useState(false)
-    const [selected, setSelected] = useState<Employee | null>(defaultEmployee || null)
+    const [selected, setSelected] = useState<Employee | null>(null)
+    const [isDirty, setIsDirty] = useState(false)
     const wrapperRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        setSelected(defaultEmployee || null)
-    }, [defaultEmployee])
+    const selectedEmployee = isDirty ? selected : (defaultEmployee || null)
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -61,6 +59,7 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
     }, [query])
 
     const handleSelect = (employee: Employee) => {
+        setIsDirty(true)
         setSelected(employee)
         onSelect(employee)
         setIsOpen(false)
@@ -68,13 +67,14 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
     }
 
     const handleClear = () => {
+        setIsDirty(true)
         setSelected(null)
         onSelect(null)
         setQuery('')
     }
 
     // If an employee is selected, replace the input with the "Chip" view
-    if (selected) {
+    if (selectedEmployee) {
         return (
             <div style={{
                 padding: '0.5rem',
@@ -99,14 +99,14 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
                         fontWeight: 'bold',
                         fontSize: '0.875rem'
                     }}>
-                        {selected.FirstName[0]}{selected.LastName[0]}
+                        {selectedEmployee.FirstName[0]}{selectedEmployee.LastName[0]}
                     </div>
                     <div>
                         <div style={{ fontWeight: 500, color: '#111827', lineHeight: 1.25 }}>
-                            {selected.FirstName} {selected.LastName}
+                            {selectedEmployee.FirstName} {selectedEmployee.LastName}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                            {selected.Department} • {selected.Email}
+                            {selectedEmployee.Department} • {selectedEmployee.Email}
                         </div>
                     </div>
                 </div>

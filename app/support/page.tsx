@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -141,7 +142,7 @@ export default async function SupportPage() {
                                 <div className="relative mb-4">
                                     <div className="w-24 h-24 rounded-full bg-gray-50 flex items-center justify-center border-4 border-white shadow-sm overflow-hidden">
                                         {member.AvatarUrl ? (
-                                            <img src={member.AvatarUrl} alt={member.Username} className="h-full w-full object-cover" />
+                                            <Image src={member.AvatarUrl} alt={member.Username} fill unoptimized sizes="96px" className="h-full w-full object-cover" />
                                         ) : (
                                             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                         )}

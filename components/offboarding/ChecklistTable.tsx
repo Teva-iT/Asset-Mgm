@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Filter, FileText, Download, ExternalLink, MoreHorizontal, FileSpreadsheet, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -37,11 +37,7 @@ export default function ChecklistTable({ userRole }: ChecklistTableProps) {
 
     const isAdmin = userRole === 'ADMIN'
 
-    useEffect(() => {
-        fetchChecklists()
-    }, [page, search, statusFilter])
-
-    const fetchChecklists = async () => {
+    const fetchChecklists = useCallback(async () => {
         setLoading(true)
         try {
             const params = new URLSearchParams({
@@ -61,7 +57,11 @@ export default function ChecklistTable({ userRole }: ChecklistTableProps) {
         } finally {
             setLoading(false)
         }
-    }
+    }, [page, search, statusFilter])
+
+    useEffect(() => {
+        fetchChecklists()
+    }, [fetchChecklists])
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Are you sure you want to delete the checklist for ${name}? This action cannot be undone.`)) {

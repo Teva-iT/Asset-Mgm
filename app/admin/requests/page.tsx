@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 
 const URGENCY_CONFIG: Record<string, { color: string, label: string }> = {
@@ -21,16 +21,18 @@ export default function AdminRequestsPage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('Pending')
     const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
+    const [nowMs, setNowMs] = useState(() => Date.now())
 
-    const load = () => {
+    const load = useCallback(() => {
         const url = filter ? `/api/requests?status=${filter}` : '/api/requests'
         fetch(url).then(r => r.json()).then(data => {
             setRequests(Array.isArray(data) ? data : [])
+            setNowMs(Date.now())
             setLoading(false)
         })
-    }
+    }, [filter])
 
-    useEffect(() => { load() }, [filter])
+    useEffect(() => { load() }, [load])
 
     async function handleAction(requestId: string, status: 'Approved' | 'Rejected') {
         await fetch(`/api/requests/${requestId}`, {
@@ -79,7 +81,7 @@ export default function AdminRequestsPage() {
                         const urgencyCfg = URGENCY_CONFIG[req.Urgency] || URGENCY_CONFIG.Normal
                         const statusCfg = STATUS_CONFIG[req.Status] || { color: 'bg-gray-100 text-gray-600' }
                         const daysLeft = req.NeededByDate
-                            ? Math.ceil((new Date(req.NeededByDate).getTime() - Date.now()) / 86400000)
+                            ? Math.ceil((new Date(req.NeededByDate).getTime() - nowMs) / 86400000)
                             : null
                         return (
                             <div key={req.RequestID} className="card border border-gray-200">

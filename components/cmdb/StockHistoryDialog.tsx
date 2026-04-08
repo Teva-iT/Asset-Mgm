@@ -40,12 +40,22 @@ export default function StockHistoryDialog({
     // ─── Load records ────────────────────────────────
     useEffect(() => {
         if (!open) return;
-        setLoading(true);
+        let cancelled = false;
         fetch(`/api/inventory-history?modelId=${model.ModelID}`)
             .then(r => r.json())
-            .then(data => setRecords(Array.isArray(data) ? data : []))
-            .catch(() => setRecords([]))
-            .finally(() => setLoading(false));
+            .then(data => {
+                if (!cancelled) setRecords(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {
+                if (!cancelled) setRecords([]);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, [open, model.ModelID]);
 
     // ─── Unique locations for dropdown ───────────────
@@ -84,7 +94,10 @@ export default function StockHistoryDialog({
         <>
             {variant === "dropdown" ? (
                 <button
-                    onClick={() => setOpen(true)}
+                    onClick={() => {
+                        setLoading(true);
+                        setOpen(true);
+                    }}
                     className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
                 >
                     <History className="h-4 w-4 text-blue-500" />
@@ -92,7 +105,10 @@ export default function StockHistoryDialog({
                 </button>
             ) : (
                 <button
-                    onClick={() => setOpen(true)}
+                    onClick={() => {
+                        setLoading(true);
+                        setOpen(true);
+                    }}
                     className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-1.5"
                     title={triggerLabel}
                 >

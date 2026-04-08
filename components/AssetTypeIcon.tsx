@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import {
     Cpu,
     Monitor,
@@ -75,6 +76,5 @@ export function getIconForType(type: string) {
 }
 
 export default function AssetTypeIcon({ type, className }: { type: string, className?: string }) {
-    const Icon = getIconForType(type)
-    return <Icon className={className} />
+    return createElement(getIconForType(type), { className })
 }

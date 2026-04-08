@@ -22,16 +22,10 @@ export default function ModernDatePicker({
 
     // Internal state handling
     const initialDateStr = value || defaultValue
-    const [selectedDate, setSelectedDate] = useState<Date | null>(
+    const [internalSelectedDate, setInternalSelectedDate] = useState<Date | null>(
         initialDateStr ? new Date(initialDateStr) : null
     )
-
-    // Sync from props
-    useEffect(() => {
-        if (value !== undefined) {
-            setSelectedDate(value ? new Date(value) : null)
-        }
-    }, [value])
+    const selectedDate = value !== undefined ? (value ? new Date(value) : null) : internalSelectedDate
 
     const [currentMonth, setCurrentMonth] = useState(selectedDate ? selectedDate.getMonth() : new Date().getMonth())
     const [currentYear, setCurrentYear] = useState(selectedDate ? selectedDate.getFullYear() : new Date().getFullYear())
@@ -86,7 +80,9 @@ export default function ModernDatePicker({
             String(d.getUTCDate()).padStart(2, '0')
         ].join('-')
 
-        setSelectedDate(new Date(currentYear, currentMonth, day))
+        if (value === undefined) {
+            setInternalSelectedDate(new Date(currentYear, currentMonth, day))
+        }
         setIsOpen(false)
 
         if (onChange) {
@@ -195,14 +191,30 @@ export default function ModernDatePicker({
                     <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between px-2">
                         <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setSelectedDate(null); setIsOpen(false); if (onChange) onChange({ target: { name, value: '' } }) }}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (value === undefined) {
+                                    setInternalSelectedDate(null)
+                                }
+                                setIsOpen(false)
+                                if (onChange) onChange({ target: { name, value: '' } })
+                            }}
                             className="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors"
                         >
                             Clear
                         </button>
                         <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); const today = new Date(); selectDate(today.getDate(), e); setSelectedDate(today); setCurrentMonth(today.getMonth()); setCurrentYear(today.getFullYear()); }}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                const today = new Date()
+                                setCurrentMonth(today.getMonth())
+                                setCurrentYear(today.getFullYear())
+                                if (value === undefined) {
+                                    setInternalSelectedDate(today)
+                                }
+                                selectDate(today.getDate(), e)
+                            }}
                             className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                         >
                             Today
