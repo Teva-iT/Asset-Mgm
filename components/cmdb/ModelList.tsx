@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import * as XLSX from "xlsx";
 
 import { Copy, Loader2, Trash2, AlertTriangle, UserPlus, Search, Filter, ChevronDown, RefreshCcw, Settings, X, MapPin, FileSpreadsheet, FileText } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
@@ -24,16 +23,475 @@ function getStockStatus(available: number, reorderLevel: number): {
     return { label: 'Stock OK', color: 'bg-green-100 text-green-700 border-green-200', icon: '🟢', tooltip: 'Stock is sufficient' };
 }
 
+function getInventoryAlert(available: number, reorderLevel: number) {
+    if (available <= 0) {
+        return {
+            severity: "Critical",
+            indicator: "🔴 CRITICAL",
+            alert: "Out of stock",
+            action: "Immediate refill required",
+            shortage: Math.max(reorderLevel || 1, 1),
+            sortOrder: 0,
+        };
+    }
+
+    if (reorderLevel > 0 && available <= reorderLevel) {
+        return {
+            severity: "Warning",
+            indicator: "🟠 LOW",
+            alert: `Below reorder level (${reorderLevel})`,
+            action: "Replenish soon",
+            shortage: reorderLevel - available,
+            sortOrder: 1,
+        };
+    }
+
+    if (available < 5) {
+        return {
+            severity: "Warning",
+            indicator: "🟠 LOW",
+            alert: "Below minimum safe stock (5)",
+            action: "Replenish soon",
+            shortage: Math.max(5 - available, 0),
+            sortOrder: 1,
+        };
+    }
+
+    return {
+        severity: "Healthy",
+        indicator: "🟢 OK",
+        alert: "Stock level is healthy",
+        action: "No action needed",
+        shortage: 0,
+        sortOrder: 3,
+    };
+}
+
 function normalizeFilePart(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+function normalizeConsolidationValue(value: unknown) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/["']/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function canonicalColor(value: unknown) {
+    const normalized = normalizeConsolidationValue(value);
+
+    if (normalized === "yellow") return "Yellow";
+    if (normalized === "magenta") return "Magenta";
+    if (normalized === "cyan") return "Cyan";
+    if (normalized === "black") return "Black";
+
+    return String(value || "").trim();
+}
+
+function buildConsolidationKey(model: any) {
+    const normalizedModelNumber = normalizeConsolidationValue(model.ModelNumber);
+    const normalizedName = normalizeConsolidationValue(model.Name);
+    const identityPart = normalizedModelNumber || normalizedName;
+
+    return [
+        identityPart,
+        normalizeConsolidationValue(model.Manufacturer?.Name),
+        normalizeConsolidationValue(model.Category),
+        normalizeConsolidationValue(canonicalColor(model.Color)),
+    ].join("::");
+}
+
+function buildModelSummaryKey(model: {
+    modelName: string;
+    modelNumber: string;
+    manufacturer: string;
+    category: string;
+}) {
+    const normalizedModelNumber = normalizeConsolidationValue(model.modelNumber);
+    const normalizedName = normalizeConsolidationValue(model.modelName);
+    const identityPart = normalizedModelNumber || normalizedName;
+
+    return [
+        identityPart,
+        normalizeConsolidationValue(model.manufacturer),
+        normalizeConsolidationValue(model.category),
+    ].join("::");
+}
+
 function csvEscape(value: unknown) {
     const stringValue = value == null ? "" : String(value);
-    if (/[",\n]/.test(stringValue)) {
+    if (/[;"\n]/.test(stringValue)) {
         return `"${stringValue.replace(/"/g, '""')}"`;
     }
     return stringValue;
+}
+
+function getRiskColors(riskLevel: string) {
+    if (riskLevel === "Critical") {
+        return { fill: "FEE2E2", font: "991B1B" };
+    }
+
+    if (riskLevel === "Warning") {
+        return { fill: "FFEDD5", font: "9A3412" };
+    }
+
+    if (riskLevel === "Caution") {
+        return { fill: "FEF3C7", font: "92400E" };
+    }
+
+    return { fill: "DCFCE7", font: "166534" };
+}
+
+function getColorCellStyle(colorValue: string) {
+    if (colorValue === "Yellow") {
+        return { fill: "FEF08A", font: "854D0E" };
+    }
+
+    if (colorValue === "Magenta") {
+        return { fill: "F5D0FE", font: "A21CAF" };
+    }
+
+    if (colorValue === "Cyan") {
+        return { fill: "CFFAFE", font: "0E7490" };
+    }
+
+    if (colorValue === "Black") {
+        return { fill: "1F2937", font: "FFFFFF" };
+    }
+
+    return null;
+}
+
+function getColorListFontArgb(colorValue: string) {
+    if (colorValue === "Yellow") return "B45309";
+    if (colorValue === "Magenta") return "A21CAF";
+    if (colorValue === "Cyan") return "0E7490";
+    if (colorValue === "Black") return "1F2937";
+    return "374151";
+}
+
+function formatColorListForExcel(value: unknown) {
+    const colors = String(value ?? "")
+        .split("|")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    if (colors.length === 0) return null;
+
+    if (colors.length === 1) {
+        const color = colors[0];
+        return {
+            text: color,
+            style: { font: getColorListFontArgb(color) },
+        };
+    }
+
+    return {
+        richText: colors.flatMap((color, index) => {
+            const segments: any[] = [
+                {
+                    text: color,
+                    font: {
+                        bold: true,
+                        color: { argb: getColorListFontArgb(color) },
+                    },
+                },
+            ];
+
+            if (index < colors.length - 1) {
+                segments.push({
+                    text: "  |  ",
+                    font: { color: { argb: "6B7280" } },
+                });
+            }
+
+            return segments;
+        }),
+    };
+}
+
+function findHeaderColumn(row: any, headerLabel: string) {
+    const headerRow = row.worksheet?.getRow(1);
+    if (!headerRow) return null;
+
+    for (let columnNumber = 1; columnNumber <= headerRow.cellCount; columnNumber += 1) {
+        if (String(headerRow.getCell(columnNumber).value ?? "").trim() === headerLabel) {
+            return columnNumber;
+        }
+    }
+
+    return null;
+}
+
+function formatWarehouseBreakdown(locationStocks: Map<string, number>) {
+    return Array.from(locationStocks.entries())
+        .sort((left, right) => left[0].localeCompare(right[0]))
+        .map(([location, quantity]) => `${location}: ${quantity}`)
+        .join(" | ");
+}
+
+function getColumnWidth(rows: Record<string, unknown>[], header: string) {
+    const longestValue = Math.max(
+        header.length,
+        ...rows.map((row) => String(row[header] ?? "").length)
+    );
+
+    return Math.min(Math.max(longestValue + 2, 12), 36);
+}
+
+function styleHeaderRow(row: any) {
+    row.eachCell((cell: any) => {
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "1D4ED8" } };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = {
+            top: { style: "thin", color: { argb: "BFDBFE" } },
+            left: { style: "thin", color: { argb: "BFDBFE" } },
+            bottom: { style: "thin", color: { argb: "BFDBFE" } },
+            right: { style: "thin", color: { argb: "BFDBFE" } },
+        };
+    });
+}
+
+function styleDataRow(row: any, riskLevel: string) {
+    const colors = getRiskColors(riskLevel);
+    const colorColumn = findHeaderColumn(row, "Color");
+    const colorsColumn = findHeaderColumn(row, "Colors");
+    const affectedColorsColumn = findHeaderColumn(row, "Affected Colors");
+    const inventoryAlertColumn = findHeaderColumn(row, "Inventory Alert");
+    const riskLevelColumn = findHeaderColumn(row, "Risk Level");
+    const priorityRankColumn = findHeaderColumn(row, "Priority Rank");
+    const alertDetailsColumn = findHeaderColumn(row, "Alert Details");
+
+    row.eachCell((cell: any) => {
+        cell.border = {
+            bottom: { style: "thin", color: { argb: "E5E7EB" } },
+        };
+    });
+
+    [inventoryAlertColumn, riskLevelColumn, priorityRankColumn, alertDetailsColumn]
+        .filter((columnNumber): columnNumber is number => Boolean(columnNumber))
+        .forEach((columnNumber, index) => {
+            const cell = row.getCell(columnNumber);
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: colors.fill } };
+            cell.font = { ...(index < 2 ? { bold: true } : {}), color: { argb: colors.font } };
+        });
+
+    if (colorColumn) {
+        const colorStyle = getColorCellStyle(String(row.getCell(colorColumn).value ?? ""));
+        if (colorStyle) {
+            const colorCell = row.getCell(colorColumn);
+            colorCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: colorStyle.fill } };
+            colorCell.font = { bold: true, color: { argb: colorStyle.font } };
+            colorCell.alignment = { vertical: "middle", horizontal: "center" };
+        }
+    }
+
+    [colorsColumn, affectedColorsColumn]
+        .filter((columnNumber): columnNumber is number => Boolean(columnNumber))
+        .forEach((columnNumber) => {
+            const colorListCell = row.getCell(columnNumber);
+            const formatted = formatColorListForExcel(colorListCell.value);
+
+            if (!formatted) return;
+
+            if ("richText" in formatted) {
+                colorListCell.value = { richText: formatted.richText };
+                colorListCell.alignment = { vertical: "middle" };
+                return;
+            }
+
+            colorListCell.value = formatted.text;
+            if (formatted.style) {
+                colorListCell.font = { bold: true, color: { argb: formatted.style.font } };
+                colorListCell.alignment = { vertical: "middle" };
+            }
+        });
+}
+
+function styleAlertSheetRow(row: any, riskLevel: string) {
+    const colors = getRiskColors(riskLevel);
+    const riskLevelColumn = findHeaderColumn(row, "Risk Level");
+    const inventoryAlertColumn = findHeaderColumn(row, "Inventory Alert");
+    const colorColumn = findHeaderColumn(row, "Color");
+    const colorsColumn = findHeaderColumn(row, "Colors");
+    const affectedColorsColumn = findHeaderColumn(row, "Affected Colors");
+
+    row.eachCell((cell: any) => {
+        cell.border = { bottom: { style: "thin", color: { argb: "E5E7EB" } } };
+    });
+
+    [inventoryAlertColumn, riskLevelColumn]
+        .filter((columnNumber): columnNumber is number => Boolean(columnNumber))
+        .forEach((columnNumber) => {
+            const cell = row.getCell(columnNumber);
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: colors.fill } };
+            cell.font = { bold: true, color: { argb: colors.font } };
+        });
+
+    if (colorColumn) {
+        const colorCell = row.getCell(colorColumn);
+        const style = getColorCellStyle(String(colorCell.value ?? ""));
+        if (style) {
+            colorCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: style.fill } };
+            colorCell.font = { bold: true, color: { argb: style.font } };
+            colorCell.alignment = { vertical: "middle", horizontal: "center" };
+        }
+    }
+
+    [colorsColumn, affectedColorsColumn]
+        .filter((columnNumber): columnNumber is number => Boolean(columnNumber))
+        .forEach((columnNumber) => {
+            const colorListCell = row.getCell(columnNumber);
+            const formatted = formatColorListForExcel(colorListCell.value);
+
+            if (!formatted) return;
+
+            if ("richText" in formatted) {
+                colorListCell.value = { richText: formatted.richText };
+                colorListCell.alignment = { vertical: "middle" };
+                return;
+            }
+
+            colorListCell.value = formatted.text;
+            if (formatted.style) {
+                colorListCell.font = { bold: true, color: { argb: formatted.style.font } };
+                colorListCell.alignment = { vertical: "middle" };
+            }
+        });
+}
+
+function styleSummaryValueCell(cell: any, riskLevel: string) {
+    const colors = getRiskColors(riskLevel);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: colors.fill } };
+    cell.font = { bold: true, color: { argb: colors.font }, size: 16 };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+}
+
+function matchesSelectedValues(selectedValues: string[], candidate: string | null | undefined) {
+    if (selectedValues.length === 0) return true;
+    return candidate ? selectedValues.includes(candidate) : false;
+}
+
+function summarizeSelections(selectedValues: string[], options: { value: string; label: string }[], fallbackLabel: string) {
+    if (selectedValues.length === 0) return fallbackLabel;
+
+    const selectedLabels = options
+        .filter((option) => selectedValues.includes(option.value))
+        .map((option) => option.label);
+
+    if (selectedLabels.length === 1) return selectedLabels[0];
+    if (selectedLabels.length === 2) return selectedLabels.join(", ");
+
+    return `${selectedLabels[0]} +${selectedLabels.length - 1}`;
+}
+
+function MultiSelectFilter({
+    label,
+    options,
+    selectedValues,
+    onChange,
+    allLabel,
+}: {
+    label: string;
+    options: { value: string; label: string }[];
+    selectedValues: string[];
+    onChange: (values: string[]) => void;
+    allLabel: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        }
+
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [open]);
+
+    function toggleValue(value: string) {
+        if (selectedValues.includes(value)) {
+            onChange(selectedValues.filter((item) => item !== value));
+            return;
+        }
+
+        onChange([...selectedValues, value]);
+    }
+
+    const summary = summarizeSelections(selectedValues, options, allLabel);
+
+    return (
+        <div ref={containerRef} className="relative flex-1 min-w-[180px]">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
+            <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                className={`w-full border rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-between gap-3 ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}
+            >
+                <span className={`truncate text-left ${selectedValues.length > 0 ? "text-gray-900" : "text-gray-500"}`}>
+                    {summary}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                    {selectedValues.length > 0 && (
+                        <span className="inline-flex min-w-5 justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {selectedValues.length}
+                        </span>
+                    )}
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+                </div>
+            </button>
+
+            {open && (
+                <div className="absolute z-30 mt-2 w-full min-w-[220px] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+                        <button
+                            type="button"
+                            onClick={() => onChange(options.map((option) => option.value))}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                        >
+                            Select all
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onChange([])}
+                            className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto py-1">
+                        {options.map((option) => {
+                            const checked = selectedValues.includes(option.value);
+
+                            return (
+                                <label
+                                    key={option.value}
+                                    className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => toggleValue(option.value)}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="truncate">{option.label}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 
@@ -48,11 +506,11 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
 
     // --- Search & Filter State ---
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterCategory, setFilterCategory] = useState("All");
-    const [filterManufacturer, setFilterManufacturer] = useState("All");
-    const [filterStatus, setFilterStatus] = useState("All");
-    const [filterLocation, setFilterLocation] = useState("All");
-    const [filterColor, setFilterColor] = useState("All");
+    const [filterCategories, setFilterCategories] = useState<string[]>([]);
+    const [filterManufacturers, setFilterManufacturers] = useState<string[]>([]);
+    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+    const [filterLocations, setFilterLocations] = useState<string[]>([]);
+    const [filterColors, setFilterColors] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
 
     // --- Actions Dropdown State ---
@@ -150,8 +608,14 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         { value: "Tablet", label: "Tablet" },
         { value: "Accessory", label: "Accessory" },
     ];
-    const manufacturerNames = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort() as string[];
-    const storageLocations = Array.from(new Set(locations.map(l => l.Name))).filter(Boolean).sort() as string[];
+    const statusOptions = [
+        { value: "In Stock", label: "In Stock" },
+        { value: "Out of Stock", label: "Out of Stock" },
+        { value: "Low Stock", label: "Low Stock" },
+    ];
+    const manufacturerOptions = Array.from(new Set(models.map(m => m.Manufacturer?.Name))).filter(Boolean).sort().map((name) => ({ value: name as string, label: name as string }));
+    const storageLocationOptions = Array.from(new Set(locations.map(l => l.Name))).filter(Boolean).sort().map((name) => ({ value: name as string, label: name as string }));
+    const colorOptions = Array.from(new Set(models.map((m) => m.Color))).filter(Boolean).sort().map((color) => ({ value: color as string, label: color as string }));
 
     // --- Apply Filters ---
     const filteredModels = models.filter(m => {
@@ -166,21 +630,29 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         }
 
         // Category Filter
-        if (filterCategory !== "All" && m.Category !== filterCategory) return false;
+        if (!matchesSelectedValues(filterCategories, m.Category)) return false;
 
         // Manufacturer Filter
-        if (filterManufacturer !== "All" && m.Manufacturer?.Name !== filterManufacturer) return false;
+        if (!matchesSelectedValues(filterManufacturers, m.Manufacturer?.Name)) return false;
 
         // Location Filter
-        if (filterLocation !== "All" && !(m.locations || []).includes(filterLocation)) return false;
+        if (filterLocations.length > 0 && !filterLocations.includes(m.DefaultLocationName || "")) return false;
 
         // Status Filter
-        if (filterStatus === "In Stock" && (m.AvailableStock || 0) <= 0) return false;
-        if (filterStatus === "Out of Stock" && (m.AvailableStock || 0) > 0) return false;
-        if (filterStatus === "Low Stock" && (m.AvailableStock || 0) > (m.ReorderLevel || 0)) return false;
+        if (filterStatuses.length > 0) {
+            const available = m.AvailableStock || 0;
+            const reorderLevel = m.ReorderLevel || 0;
+            const modelStatuses: string[] = [];
+
+            if (available > 0) modelStatuses.push("In Stock");
+            if (available <= 0) modelStatuses.push("Out of Stock");
+            if (reorderLevel > 0 && available <= reorderLevel) modelStatuses.push("Low Stock");
+
+            if (!filterStatuses.some((status) => modelStatuses.includes(status))) return false;
+        }
 
         // Color Filter
-        if (filterColor !== "All" && m.Color !== filterColor) return false;
+        if (!matchesSelectedValues(filterColors, m.Color)) return false;
 
         return true;
     });
@@ -188,40 +660,335 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     const totalAvailable = filteredModels.reduce((sum, m) => sum + (m.AvailableStock || 0), 0);
     const totalAssigned = filteredModels.reduce((sum, m) => sum + (m.AssignedStock || 0), 0);
     const totalStock = totalAvailable + totalAssigned;
+    const uniqueModelNameCount = new Set(
+        filteredModels
+            .map((model) => normalizeConsolidationValue(model.Name))
+            .filter(Boolean)
+    ).size;
 
-    const activeFilterCount = (filterCategory !== "All" ? 1 : 0) + (filterManufacturer !== "All" ? 1 : 0) + (filterLocation !== "All" ? 1 : 0) + (filterStatus !== "All" ? 1 : 0) + (filterColor !== "All" ? 1 : 0);
+    const activeFilterCount = filterCategories.length + filterManufacturers.length + filterLocations.length + filterStatuses.length + filterColors.length;
 
-    const exportRows = filteredModels.map((m) => {
-        const stockStatus = getStockStatus(m.AvailableStock || 0, m.ReorderLevel || 0);
+    const consolidatedModels = Array.from(
+        filteredModels.reduce((groups, model) => {
+            const consolidationKey = buildConsolidationKey(model);
+
+            const existing = groups.get(consolidationKey);
+            const modelLocations = [
+                model.DefaultLocationName,
+                ...(model.locations || []),
+            ].filter(Boolean) as string[];
+            const stockLocation = model.DefaultLocationName || modelLocations[0] || "Unassigned";
+
+            if (existing) {
+                existing.availableStock += model.AvailableStock || 0;
+                existing.assignedStock += model.AssignedStock || 0;
+                existing.reorderLevel = Math.max(existing.reorderLevel, model.ReorderLevel || 0);
+                existing.activeDevices += model._count?.assets || 0;
+                modelLocations.forEach((location) => existing.locations.add(location));
+                existing.locationStocks.set(stockLocation, (existing.locationStocks.get(stockLocation) || 0) + (model.AvailableStock || 0));
+                if (model.Series) existing.series.add(model.Series);
+                if (model.Status) existing.conditions.add(model.Status);
+                existing.sourceModels += 1;
+                return groups;
+            }
+
+            groups.set(consolidationKey, {
+                modelName: model.Name || "",
+                modelNumber: model.ModelNumber || "",
+                series: new Set(model.Series ? [model.Series] : []),
+                manufacturer: model.Manufacturer?.Name || "",
+                category: model.Category || "",
+                color: canonicalColor(model.Color),
+                availableStock: model.AvailableStock || 0,
+                assignedStock: model.AssignedStock || 0,
+                reorderLevel: model.ReorderLevel || 0,
+                activeDevices: model._count?.assets || 0,
+                locations: new Set(modelLocations),
+                locationStocks: new Map([[stockLocation, model.AvailableStock || 0]]),
+                conditions: new Set(model.Status ? [model.Status] : []),
+                sourceModels: 1,
+            });
+
+            return groups;
+        }, new Map<string, {
+            modelName: string;
+            modelNumber: string;
+            series: Set<string>;
+            manufacturer: string;
+            category: string;
+            color: string;
+            availableStock: number;
+            assignedStock: number;
+            reorderLevel: number;
+            activeDevices: number;
+            locations: Set<string>;
+            locationStocks: Map<string, number>;
+            conditions: Set<string>;
+            sourceModels: number;
+        }>())
+    ).map(([, group]) => group);
+
+    const exportRows = consolidatedModels.map((group) => {
+        const stockStatus = getStockStatus(group.availableStock, group.reorderLevel);
+        const inventoryAlert = getInventoryAlert(group.availableStock, group.reorderLevel);
 
         return {
-            "Model Name": m.Name || "",
-            "Model Number": m.ModelNumber || "",
-            "Series": m.Series || "",
-            "Manufacturer": m.Manufacturer?.Name || "",
-            "Category": m.Category || "",
-            "Color": m.Color || "",
-            "Location": m.DefaultLocationName || "",
-            "Available Stock": m.AvailableStock || 0,
-            "Assigned Stock": m.AssignedStock || 0,
-            "Total Stock": (m.AvailableStock || 0) + (m.AssignedStock || 0),
+            "Model Name": group.modelName,
+            "Series": Array.from(group.series).sort().join(" | "),
+            "Manufacturer": group.manufacturer,
+            "Category": group.category,
+            "Color": canonicalColor(group.color),
+            "Location": Array.from(group.locations).sort().join(" | "),
+            "Inventory Alert": inventoryAlert.indicator,
+            "Risk Level": inventoryAlert.severity,
+            "Priority Rank": inventoryAlert.sortOrder + 1,
+            "Alert Details": inventoryAlert.alert,
+            "Recommended Action": inventoryAlert.action,
+            "Available Stock": group.availableStock,
+            "Assigned Stock": group.assignedStock,
+            "Total Stock": group.availableStock + group.assignedStock,
+            "Reorder Level": group.reorderLevel,
+            "Shortage To Target": inventoryAlert.shortage,
             "Stock Status": stockStatus.label,
-            "Condition": m.Status || "",
-            "Active Devices": m._count?.assets || 0,
+            "Condition": Array.from(group.conditions).sort().join(" | "),
+            "Active Devices": group.activeDevices,
+            "Consolidated Warehouses": group.locations.size,
         };
     });
 
-    function buildExportFileName(extension: "csv" | "xlsx") {
+    const modelSummaryRows = consolidatedModels.map((group) => {
+        const inventoryAlert = getInventoryAlert(group.availableStock, group.reorderLevel);
+        const stockStatus = getStockStatus(group.availableStock, group.reorderLevel);
+
+        return {
+            "Model Name": group.modelName,
+            "Series": Array.from(group.series).sort().join(" | "),
+            "Manufacturer": group.manufacturer,
+            "Category": group.category,
+            "Color": canonicalColor(group.color),
+            "Warehouse Breakdown": formatWarehouseBreakdown(group.locationStocks),
+            "Consolidated Amount": group.availableStock,
+            "Location": Array.from(group.locations).sort().join(" | "),
+            "Inventory Alert": inventoryAlert.indicator,
+            "Risk Level": inventoryAlert.severity,
+            "Alert Details": inventoryAlert.alert,
+            "Recommended Action": inventoryAlert.action,
+            "Shortage To Target": inventoryAlert.shortage,
+            "Stock Status": stockStatus.label,
+            "Condition": Array.from(group.conditions).sort().join(" | "),
+            "Consolidated Warehouses": group.locations.size,
+        };
+    });
+
+    const severityPriority = { Critical: 0, Warning: 1, Caution: 2, Healthy: 3 } as const;
+
+    const alertRows = exportRows
+        .filter((row) => row["Risk Level"] !== "Healthy")
+        .sort((left, right) => {
+            const severityDiff = severityPriority[left["Risk Level"] as keyof typeof severityPriority] - severityPriority[right["Risk Level"] as keyof typeof severityPriority];
+            if (severityDiff !== 0) return severityDiff;
+
+            return Number(right["Shortage To Target"] || 0) - Number(left["Shortage To Target"] || 0);
+        });
+
+    const sortedExportRows = [...exportRows].sort((left, right) => {
+        const severityDiff = severityPriority[left["Risk Level"] as keyof typeof severityPriority] - severityPriority[right["Risk Level"] as keyof typeof severityPriority];
+        if (severityDiff !== 0) return severityDiff;
+
+        return Number(right["Shortage To Target"] || 0) - Number(left["Shortage To Target"] || 0);
+    });
+
+    const modelSummaryAlertRows = modelSummaryRows
+        .filter((row) => row["Risk Level"] !== "Healthy")
+        .sort((left, right) => {
+            const severityDiff = severityPriority[left["Risk Level"] as keyof typeof severityPriority] - severityPriority[right["Risk Level"] as keyof typeof severityPriority];
+            if (severityDiff !== 0) return severityDiff;
+
+            return Number(right["Shortage To Target"] || 0) - Number(left["Shortage To Target"] || 0);
+        });
+
+    const sortedModelSummaryRows = [...modelSummaryRows].sort((left, right) => {
+        const severityDiff = severityPriority[left["Risk Level"] as keyof typeof severityPriority] - severityPriority[right["Risk Level"] as keyof typeof severityPriority];
+        if (severityDiff !== 0) return severityDiff;
+
+        return Number(right["Shortage To Target"] || 0) - Number(left["Shortage To Target"] || 0);
+    });
+
+    function buildExportFileName(extension: "csv" | "xlsx", variant?: string) {
         const parts = ["asset-models"];
 
-        if (filterCategory !== "All") parts.push(normalizeFilePart(filterCategory));
-        if (filterManufacturer !== "All") parts.push(normalizeFilePart(filterManufacturer));
-        if (filterLocation !== "All") parts.push(normalizeFilePart(filterLocation));
-        if (filterStatus !== "All") parts.push(normalizeFilePart(filterStatus));
-        if (filterColor !== "All") parts.push(normalizeFilePart(filterColor));
+        if (filterCategories.length === 1) parts.push(normalizeFilePart(filterCategories[0]));
+        if (filterCategories.length > 1) parts.push("multi-category");
+        if (filterManufacturers.length === 1) parts.push(normalizeFilePart(filterManufacturers[0]));
+        if (filterManufacturers.length > 1) parts.push("multi-manufacturer");
+        if (filterLocations.length === 1) parts.push(normalizeFilePart(filterLocations[0]));
+        if (filterLocations.length > 1) parts.push("multi-location");
+        if (filterStatuses.length === 1) parts.push(normalizeFilePart(filterStatuses[0]));
+        if (filterStatuses.length > 1) parts.push("multi-status");
+        if (filterColors.length === 1) parts.push(normalizeFilePart(filterColors[0]));
+        if (filterColors.length > 1) parts.push("multi-color");
         if (searchQuery.trim()) parts.push("filtered");
+        if (variant) parts.push(normalizeFilePart(variant));
 
         return `${parts.join("-") || "asset-models"}.${extension}`;
+    }
+
+    function buildWorkbookSummaryRows(rows: Record<string, unknown>[]) {
+        return [
+            {
+                "Summary Item": "Critical items",
+                Count: rows.filter((row) => row["Risk Level"] === "Critical").length,
+                Risk: "Critical",
+                Notes: "Out of stock and immediate refill needed",
+            },
+            {
+                "Summary Item": "Warning items",
+                Count: rows.filter((row) => row["Risk Level"] === "Warning").length,
+                Risk: "Warning",
+                Notes: "At or below reorder level",
+            },
+            {
+                "Summary Item": "Caution items",
+                Count: rows.filter((row) => row["Risk Level"] === "Caution").length,
+                Risk: "Caution",
+                Notes: "Low reserve stock without a reorder level",
+            },
+            {
+                "Summary Item": "Healthy items",
+                Count: rows.filter((row) => row["Risk Level"] === "Healthy").length,
+                Risk: "Healthy",
+                Notes: "No immediate inventory risk",
+            },
+        ];
+    }
+
+    function exportStyledExcel(
+        rows: Record<string, unknown>[],
+        alertSheetRows: Record<string, unknown>[],
+        fileVariant?: string,
+        modelsSheetName: string = "Models"
+    ) {
+        if (rows.length === 0) {
+            alert("No filtered models available to export.");
+            return;
+        }
+
+        const summaryRows = buildWorkbookSummaryRows(rows);
+
+        void (async () => {
+            const ExcelJS = (await import("exceljs")).default;
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = "Asset Manager";
+            workbook.created = new Date();
+
+            const summarySheet = workbook.addWorksheet("Summary", {
+                views: [{ state: "frozen", ySplit: 1 }],
+            });
+            const alertsSheet = workbook.addWorksheet("Alerts", {
+                views: [{ state: "frozen", ySplit: 1 }],
+            });
+            const modelsSheet = workbook.addWorksheet(modelsSheetName, {
+                views: [{ state: "frozen", ySplit: 1 }],
+            });
+
+            summarySheet.columns = [
+                { header: "Summary Item", key: "Summary Item", width: 24 },
+                { header: "Count", key: "Count", width: 14 },
+                { header: "Risk", key: "Risk", width: 14 },
+                { header: "Notes", key: "Notes", width: 40 },
+            ];
+            alertsSheet.columns = Object.keys(alertSheetRows[0] || {
+                "Inventory Alert": "",
+                "Risk Level": "",
+                "Priority Rank": "",
+                "Alert Details": "",
+                "Recommended Action": "",
+            }).map((header) => ({ header, key: header, width: getColumnWidth(alertSheetRows.length > 0 ? alertSheetRows : [{
+                "Inventory Alert": "🟢 OK",
+                "Risk Level": "Healthy",
+                "Priority Rank": 4,
+                "Alert Details": "No low-stock or out-of-stock items in this export",
+                "Recommended Action": "No action needed",
+            }], header) }));
+            modelsSheet.columns = Object.keys(rows[0]).map((header) => ({
+                header,
+                key: header,
+                width: getColumnWidth(rows, header),
+            }));
+
+            styleHeaderRow(summarySheet.getRow(1));
+            styleHeaderRow(alertsSheet.getRow(1));
+            styleHeaderRow(modelsSheet.getRow(1));
+
+            summaryRows.forEach((row) => {
+                const addedRow = summarySheet.addRow(row);
+                styleSummaryValueCell(addedRow.getCell("B"), row.Risk);
+                addedRow.getCell("C").fill = { type: "pattern", pattern: "solid", fgColor: { argb: getRiskColors(row.Risk).fill } };
+                addedRow.getCell("C").font = { bold: true, color: { argb: getRiskColors(row.Risk).font } };
+            });
+
+            const effectiveAlertRows = alertSheetRows.length > 0 ? alertSheetRows : [{
+                "Inventory Alert": "🟢 OK",
+                "Risk Level": "Healthy",
+                "Priority Rank": 4,
+                "Alert Details": "No low-stock or out-of-stock items in this export",
+                "Recommended Action": "No action needed",
+            }];
+
+            effectiveAlertRows.forEach((row) => {
+                const addedRow = alertsSheet.addRow(row);
+                const riskLevel = String(row["Risk Level"] ?? "Healthy");
+                styleAlertSheetRow(addedRow, riskLevel);
+            });
+
+            rows.forEach((row) => {
+                const addedRow = modelsSheet.addRow(row);
+                styleDataRow(addedRow, String(row["Risk Level"] ?? "Healthy"));
+            });
+
+            summarySheet.autoFilter = "A1:D1";
+            alertsSheet.autoFilter = {
+                from: { row: 1, column: 1 },
+                to: { row: 1, column: alertsSheet.columnCount },
+            };
+            modelsSheet.autoFilter = {
+                from: { row: 1, column: 1 },
+                to: { row: 1, column: modelsSheet.columnCount },
+            };
+
+            summarySheet.insertRows(1, [
+                ["Inventory Export Dashboard"],
+                [`Generated: ${new Date().toLocaleString()}`],
+                [],
+            ]);
+            summarySheet.mergeCells("A1:D1");
+            summarySheet.mergeCells("A2:D2");
+            summarySheet.getCell("A1").font = { bold: true, size: 18, color: { argb: "0F172A" } };
+            summarySheet.getCell("A2").font = { italic: true, color: { argb: "475569" } };
+            summarySheet.getCell("A1").alignment = { horizontal: "left" };
+            summarySheet.getCell("A2").alignment = { horizontal: "left" };
+            styleHeaderRow(summarySheet.getRow(4));
+            summarySheet.views = [{ state: "frozen", ySplit: 4 }];
+
+            const totalShortage = rows.reduce((sum, row) => sum + Number(row["Shortage To Target"] || 0), 0);
+            summarySheet.addRow([]);
+            summarySheet.addRow({ "Summary Item": "Total shortage to target", Count: totalShortage, Risk: "Warning", Notes: "Units required to bring risky items back to target" });
+            const shortageRow = summarySheet.lastRow;
+            if (shortageRow) {
+                styleSummaryValueCell(shortageRow.getCell("B"), "Warning");
+                shortageRow.getCell("C").fill = { type: "pattern", pattern: "solid", fgColor: { argb: getRiskColors("Warning").fill } };
+                shortageRow.getCell("C").font = { bold: true, color: { argb: getRiskColors("Warning").font } };
+            }
+
+            const arrayBuffer = await workbook.xlsx.writeBuffer();
+            downloadBlob(
+                new Blob([arrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+                buildExportFileName("xlsx", fileVariant)
+            );
+        })().catch((error) => {
+            console.error("Excel export failed:", error);
+            alert("Failed to generate styled Excel export.");
+        });
     }
 
     function downloadBlob(blob: Blob, fileName: string) {
@@ -243,40 +1010,32 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
 
         const headers = Object.keys(exportRows[0]);
         const csvLines = [
-            headers.map(csvEscape).join(","),
-            ...exportRows.map((row) => headers.map((header) => csvEscape(row[header as keyof typeof row])).join(",")),
+            "sep=;",
+            headers.map(csvEscape).join(";"),
+            ...exportRows.map((row) => headers.map((header) => csvEscape(row[header as keyof typeof row])).join(";")),
         ];
 
         downloadBlob(
-            new Blob([`\uFEFF${csvLines.join("\n")}`], { type: "text/csv;charset=utf-8;" }),
+            new Blob([`\uFEFF${csvLines.join("\r\n")}`], { type: "text/csv;charset=utf-8;" }),
             buildExportFileName("csv")
         );
     }
 
     function exportAsExcel() {
-        if (exportRows.length === 0) {
-            alert("No filtered models available to export.");
-            return;
-        }
+        exportStyledExcel(sortedExportRows, alertRows, "by-color");
+    }
 
-        const worksheet = XLSX.utils.json_to_sheet(exportRows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Models");
-
-        const arrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-        downloadBlob(
-            new Blob([arrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-            buildExportFileName("xlsx")
-        );
+    function exportAsModelSummaryExcel() {
+        exportStyledExcel(sortedModelSummaryRows, modelSummaryAlertRows, "by-model", "Model Colors");
     }
 
     function clearFilters() {
         setSearchQuery("");
-        setFilterCategory("All");
-        setFilterManufacturer("All");
-        setFilterLocation("All");
-        setFilterStatus("All");
-        setFilterColor("All");
+        setFilterCategories([]);
+        setFilterManufacturers([]);
+        setFilterLocations([]);
+        setFilterStatuses([]);
+        setFilterColors([]);
     }
 
     return (
@@ -406,10 +1165,20 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                 onClick={exportAsExcel}
                                 disabled={filteredModels.length === 0}
                                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Export filtered rows as Excel"
+                                title="Export filtered rows grouped by model and color"
                             >
                                 <FileSpreadsheet className="h-4 w-4" />
-                                Excel
+                                Excel by Color
+                            </button>
+                            <button
+                                type="button"
+                                onClick={exportAsModelSummaryExcel}
+                                disabled={filteredModels.length === 0}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Export filtered rows grouped into one row per unique model"
+                            >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Excel by Model
                             </button>
                         </div>
 
@@ -434,7 +1203,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                         {/* Summary */}
                         <div className="text-sm text-gray-500 whitespace-nowrap pl-2 border-l border-gray-200 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1">
                             <div>
-                                Models: <span className="font-bold text-gray-900">{filteredModels.length}</span>
+                                Models: <span className="font-bold text-gray-900">{uniqueModelNameCount}</span>
                             </div>
                             <div className="hidden sm:block w-px h-3 bg-gray-200" />
                             <div>
@@ -449,80 +1218,51 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                 {showFilters && (
                     <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-4 animate-in fade-in slide-in-from-top-2">
                         {/* Status Filter */}
-                        <div className="flex-1 min-w-[200px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Stock Status</label>
-                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                {["All", "In Stock", "Out of Stock", "Low Stock"].map((status) => (
-                                    <button
-                                        key={status}
-                                        onClick={() => setFilterStatus(status)}
-                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filterStatus === status
-                                            ? "bg-white text-gray-900 shadow-sm"
-                                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
-                                            }`}
-                                    >
-                                        {status}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        <MultiSelectFilter
+                            label="Stock Status"
+                            options={statusOptions}
+                            selectedValues={filterStatuses}
+                            onChange={setFilterStatuses}
+                            allLabel="All Statuses"
+                        />
 
                         {/* Category Filter */}
-                        <div className="flex-1 min-w-[150px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
-                            <select
-                                value={filterCategory}
-                                onChange={(e) => setFilterCategory(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                            >
-                                <option value="All">All Categories</option>
-                                {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                            </select>
-                        </div>
+                        <MultiSelectFilter
+                            label="Category"
+                            options={categories}
+                            selectedValues={filterCategories}
+                            onChange={setFilterCategories}
+                            allLabel="All Categories"
+                        />
 
                         {/* Manufacturer Filter */}
-                        <div className="flex-1 min-w-[150px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Manufacturer</label>
-                            <select
-                                value={filterManufacturer}
-                                onChange={(e) => setFilterManufacturer(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="All">All Manufacturers</option>
-                                {manufacturerNames.map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
-                        </div>
+                        <MultiSelectFilter
+                            label="Manufacturer"
+                            options={manufacturerOptions}
+                            selectedValues={filterManufacturers}
+                            onChange={setFilterManufacturers}
+                            allLabel="All Manufacturers"
+                        />
 
                         {/* Location Filter */}
-                        {storageLocations.length > 0 && (
-                            <div className="flex-1 min-w-[150px]">
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Storage Location</label>
-                                <select
-                                    value={filterLocation}
-                                    onChange={(e) => setFilterLocation(e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="All">All Locations</option>
-                                    {storageLocations.map(l => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                            </div>
+                        {storageLocationOptions.length > 0 && (
+                            <MultiSelectFilter
+                                label="Storage Location"
+                                options={storageLocationOptions}
+                                selectedValues={filterLocations}
+                                onChange={setFilterLocations}
+                                allLabel="All Locations"
+                            />
                         )}
 
                         {/* Color Filter */}
-                        <div className="flex-1 min-w-[150px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Color</label>
-                            <select
-                                value={filterColor}
-                                onChange={(e) => setFilterColor(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="All">All Colors</option>
-                                <option value="Black">Black</option>
-                                <option value="Cyan">Cyan</option>
-                                <option value="Magenta">Magenta</option>
-                                <option value="Yellow">Yellow</option>
-                            </select>
-                        </div>
+                        <MultiSelectFilter
+                            label="Color"
+                            options={colorOptions}
+                            selectedValues={filterColors}
+                            onChange={setFilterColors}
+                            allLabel="All Colors"
+                        />
 
                         {/* Clear All */}
                         {(searchQuery || activeFilterCount > 0) && (

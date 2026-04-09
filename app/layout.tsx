@@ -41,7 +41,7 @@ export default async function RootLayout({
                     {/* Right: User Profile */}
                     <div className="flex-shrink-0 md:w-48 ml-4 flex justify-end">
                         <Suspense fallback={<div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />}>
-                            <UserProfileWrapper />
+                            <UserProfileWrapper user={user} />
                         </Suspense>
                     </div>
                 </nav>

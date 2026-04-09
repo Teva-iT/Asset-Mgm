@@ -2,22 +2,19 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AssetList from '@/components/AssetList'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 30
 
 export default async function AssetsPage() {
-    // Fetch all models for total stock calculation
-    const { data: models } = await supabase.from("AssetModel").select("TotalStock, AvailableStock, AssignedStock");
-
-    // Fetch assets with model/manufacturer
-    const { data: assetsRaw } = await supabase
-        .from("Asset")
-        .select("*, AssetModel:ModelID(*, Manufacturer:ManufacturerID(*)), assignments:Assignment(Status, Employee:EmployeeID(FirstName, LastName))")
-        .order("createdAt", { ascending: false });
-
-    // Fetch storage locations separately (PostgREST FK join is unreliable)
-    const { data: locations } = await supabase
-        .from("StorageLocation")
-        .select("LocationID, Name, ParentLocationID");
+    const [{ data: models }, { data: assetsRaw }, { data: locations }] = await Promise.all([
+        supabase.from("AssetModel").select("TotalStock, AvailableStock, AssignedStock"),
+        supabase
+            .from("Asset")
+            .select("AssetID, AssetType, AssetName, Brand, Model, SerialNumber, DeviceTag, Status, Condition, Location, StorageLocationID, WarrantyExpiryDate, updatedAt, AssetModel:ModelID(Name, Manufacturer:ManufacturerID(Name)), assignments:Assignment(Status, Employee:EmployeeID(FirstName, LastName))")
+            .order("createdAt", { ascending: false }),
+        supabase
+            .from("StorageLocation")
+            .select("LocationID, Name, ParentLocationID")
+    ]);
 
     const locMap: Record<string, any> = {};
     if (locations) {

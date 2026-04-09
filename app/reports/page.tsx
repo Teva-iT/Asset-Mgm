@@ -1,7 +1,7 @@
 
 import EnterpriseReport from '@/components/reports/EnterpriseReport'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default function ReportsPage() {
     return (

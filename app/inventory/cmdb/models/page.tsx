@@ -3,7 +3,7 @@ import { getManufacturers } from "@/app/actions/manufacturer";
 import { getStorageLocations } from "@/app/actions/storage";
 import ModelList from "@/components/cmdb/ModelList";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 export default async function ModelsPage() {
     // Fetch data in parallel for better performance

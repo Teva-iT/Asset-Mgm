@@ -4,12 +4,12 @@ import AssetImporter from '@/components/inventory/AssetImporter'
 import Link from 'next/link'
 import LowStockDashboard from '@/components/inventory/LowStockDashboard'
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = 'force-dynamic'
+export const revalidate = 30
 
 async function getInventoryData() {
-    // Fetch all assets that are NOT currently assigned (In Stock)
-    const { data: assetsRaw } = await supabase.from("Asset").select("*, assignments:Assignment(Status)");
+    const { data: assetsRaw } = await supabase
+        .from("Asset")
+        .select("AssetID, AssetType, Condition, OperationalState, assignments:Assignment(Status)");
 
     // Optimized: Filter in memory since Supabase JS client doesn't support complex relation absence filtering natively
     const inStockAssets = (assetsRaw || []).filter(a => {

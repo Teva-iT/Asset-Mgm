@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import EmployeePageActions from '@/components/EmployeePageActions'
 import EmployeeSearch from '@/components/EmployeeSearch'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 15
 
 export default async function EmployeesPage({
     searchParams,
@@ -14,7 +14,10 @@ export default async function EmployeesPage({
 }) {
     const query = searchParams?.q || ''
 
-    let queryBuilder = supabase.from("Employee").select("*, assignments:Assignment(Status)").order("LastName", { ascending: true });
+    let queryBuilder = supabase
+        .from("Employee")
+        .select("EmployeeID, Slug, FirstName, LastName, Email, Department, assignments:Assignment(Status)")
+        .order("LastName", { ascending: true });
 
     if (query) {
         queryBuilder = queryBuilder.or(`FirstName.ilike.%${query}%,LastName.ilike.%${query}%,Email.ilike.%${query}%`);

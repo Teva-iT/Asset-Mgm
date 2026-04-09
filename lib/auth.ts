@@ -14,8 +14,21 @@ export const getCurrentUser = cache(async () => {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret')
         const { payload } = await jwtVerify(token, secret)
 
-        // Optional: Fetch full user from DB if we need updated fields (like username changed)
-        // For now, payload has userId and role, but let's get the username
+        const payloadUsername = typeof payload.username === 'string' ? payload.username : null
+        const payloadRole = typeof payload.role === 'string' ? payload.role : null
+        const payloadInitials = typeof payload.initials === 'string' ? payload.initials : null
+
+        // Fast path: use the JWT payload directly to avoid a DB hit on every navigation.
+        if (payload.userId && payloadUsername && payloadRole) {
+            return {
+                userId: payload.userId as string,
+                username: payloadUsername,
+                role: payloadRole,
+                initials: payloadInitials || payloadUsername.substring(0, 2).toUpperCase()
+            }
+        }
+
+        // Fallback for older tokens that do not yet carry full profile fields.
         const { data: user } = await supabase
             .from("User")
             .select("UserID, Username, Role")
