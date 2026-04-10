@@ -5,12 +5,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Download, FileSpreadsheet, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { importAssets } from "@/app/actions/import";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 export default function AssetImporter() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ success: boolean; count?: number; errors?: string[] } | null>(null);
     const router = useRouter();
+    const modalRef = useModalDismiss<HTMLDivElement>(() => { setOpen(false); setResult(null); }, open);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -49,7 +51,7 @@ export default function AssetImporter() {
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[550px] overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[550px] overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                             <div className="flex gap-3">

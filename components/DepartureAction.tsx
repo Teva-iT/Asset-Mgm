@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import ModernDatePicker from './ModernDatePicker'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
 
 interface DepartureActionProps {
     employeeId: string
@@ -22,6 +23,7 @@ export default function DepartureAction({ employeeId, employeeName, currentStatu
     )
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const modalRef = useRef<HTMLDivElement | null>(null)
 
     const isEditing = currentStatus === 'Leaving' || currentStatus === 'Left'
     const buttonText = isEditing ? 'Edit Date' : 'Mark as Leaving'
@@ -126,6 +128,28 @@ export default function DepartureAction({ employeeId, employeeName, currentStatu
         return () => setMounted(false)
     }, [])
 
+    useEscapeKey(() => setShowModal(false), showModal)
+
+    useEffect(() => {
+        if (!showModal) return
+
+        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+            const target = event.target as Node | null
+            if (!modalRef.current || !target) return
+            if (!modalRef.current.contains(target)) {
+                setShowModal(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handlePointerDown)
+        document.addEventListener('touchstart', handlePointerDown)
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown)
+            document.removeEventListener('touchstart', handlePointerDown)
+        }
+    }, [showModal])
+
     return (
         <>
             <TriggerButton />
@@ -155,7 +179,7 @@ export default function DepartureAction({ employeeId, employeeName, currentStatu
                             to { transform: translateY(0); opacity: 1; }
                         }
                     `}</style>
-                    <div style={{
+                    <div ref={modalRef} style={{
                         backgroundColor: 'white',
                         borderRadius: '16px',
                         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',

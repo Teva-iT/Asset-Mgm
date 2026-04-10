@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useZxing } from "react-zxing";
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 const BarcodeScanner = ({ onResult, onClose }: { onResult: (result: string) => void, onClose: () => void }) => {
     const { ref } = useZxing({
@@ -15,10 +16,11 @@ const BarcodeScanner = ({ onResult, onClose }: { onResult: (result: string) => v
             // console.warn(error); 
         },
     });
+    const modalRef = useModalDismiss<HTMLDivElement>(onClose, true)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-white rounded-xl overflow-hidden w-full max-w-md relative">
+            <div ref={modalRef} className="bg-white rounded-xl overflow-hidden w-full max-w-md relative">
                 <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-bold text-gray-900">Scan Barcode</h3>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">

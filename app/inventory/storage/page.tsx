@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Pencil, Trash2, Plus, X, Save } from 'lucide-react'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 interface StorageLocation {
     LocationID: string
@@ -88,6 +89,7 @@ export default function StorageLocationsPage() {
         setEditDescription('')
         setEditParent('')
     }
+    const editModalRef = useModalDismiss<HTMLDivElement>(cancelEdit, Boolean(editingLocation))
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -248,7 +250,7 @@ export default function StorageLocationsPage() {
             {/* Edit Modal */}
             {editingLocation && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                    <div ref={editModalRef} className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold">Edit Location</h3>
                             <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600">

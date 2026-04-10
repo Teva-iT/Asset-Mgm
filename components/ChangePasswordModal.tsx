@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 export default function ChangePasswordModal({ isOpen, onClose, username }: { isOpen: boolean, onClose: () => void, username: string }) {
     const [oldPassword, setOldPassword] = useState('')
@@ -9,6 +10,7 @@ export default function ChangePasswordModal({ isOpen, onClose, username }: { isO
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+    const modalRef = useModalDismiss<HTMLDivElement>(onClose, isOpen)
 
     if (!isOpen) return null
 
@@ -55,7 +57,7 @@ export default function ChangePasswordModal({ isOpen, onClose, username }: { isO
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+            <div ref={modalRef} className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"

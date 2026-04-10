@@ -1,18 +1,28 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Search } from 'lucide-react'
-import AssetTypeIcon from './AssetTypeIcon'
+import { useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, Factory, Search } from 'lucide-react'
 
-interface AssetTypeSelectProps {
+interface ManufacturerOption {
+    ManufacturerID: string
+    Name: string
+}
+
+interface ManufacturerSelectProps {
     value: string
     onChange: (value: string) => void
-    options: string[]
+    options: ManufacturerOption[]
     placeholder?: string
     className?: string
 }
 
-export default function AssetTypeSelect({ value, onChange, options, placeholder = "Select Type", className = "" }: AssetTypeSelectProps) {
+export default function ManufacturerSelect({
+    value,
+    onChange,
+    options,
+    placeholder = 'Select Manufacturer',
+    className = '',
+}: ManufacturerSelectProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [highlightedIndex, setHighlightedIndex] = useState(0)
@@ -37,6 +47,7 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
                 closeDropdown()
             }
         }
+
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
@@ -48,14 +59,15 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
         return () => window.clearTimeout(timeoutId)
     }, [isOpen])
 
-    const handleSelect = (option: string) => {
-        onChange(option)
+    const selectedOption = options.find((option) => option.ManufacturerID === value)
+    const filteredOptions = options.filter((option) =>
+        option.Name.toLowerCase().includes(query.trim().toLowerCase())
+    )
+
+    function handleSelect(optionId: string) {
+        onChange(optionId)
         closeDropdown()
     }
-
-    const filteredOptions = options.filter((option) =>
-        option.toLowerCase().includes(query.trim().toLowerCase())
-    )
 
     function moveHighlight(direction: 1 | -1) {
         if (filteredOptions.length === 0) return
@@ -70,7 +82,7 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
         })
     }
 
-    function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement | HTMLDivElement>) {
+    function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement | HTMLButtonElement>) {
         if (!isOpen && (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault()
             openDropdown()
@@ -95,7 +107,7 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
             event.preventDefault()
             const highlightedOption = filteredOptions[highlightedIndex]
             if (highlightedOption) {
-                handleSelect(highlightedOption)
+                handleSelect(highlightedOption.ManufacturerID)
             }
             return
         }
@@ -108,7 +120,8 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
 
     return (
         <div className={`relative ${className}`} ref={wrapperRef}>
-            <div
+            <button
+                type="button"
                 onClick={() => {
                     if (isOpen) {
                         closeDropdown()
@@ -117,25 +130,18 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
                     }
                 }}
                 onKeyDown={handleKeyDown}
-                tabIndex={0}
-                className="select-field flex items-center gap-3 cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 h-full shadow-sm"
+                className="flex h-10 w-full items-center gap-3 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-                {value ? (
+                {selectedOption ? (
                     <>
-                        <AssetTypeIcon type={value} className="w-5 h-5 text-gray-600" />
-                        <span className="text-gray-900">{value}</span>
+                        <Factory className="h-4 w-4 text-gray-500" />
+                        <span className="text-gray-900">{selectedOption.Name}</span>
                     </>
                 ) : (
                     <span className="text-gray-400">{placeholder}</span>
                 )}
-
-                {/* Chevron Icon */}
-                <div className="ml-auto">
-                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
-            </div>
+                <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
 
             {isOpen && (
                 <div className="absolute z-50 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
@@ -151,31 +157,33 @@ export default function AssetTypeSelect({ value, onChange, options, placeholder 
                                     setHighlightedIndex(0)
                                 }}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Search category..."
+                                placeholder="Search manufacturer..."
                                 className="h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
                             />
                         </div>
                     </div>
                     <div className="max-h-52 overflow-y-auto">
                     {filteredOptions.length > 0 ? (
-                        <>
-                            {filteredOptions.map((option, index) => (
-                                <div
-                                    key={option}
-                                    onClick={() => handleSelect(option)}
-                                    onMouseEnter={() => setHighlightedIndex(index)}
-                                    className={`
-                                        flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
-                                        ${value === option ? 'bg-blue-50 text-blue-700' : highlightedIndex === index ? 'bg-gray-50 text-gray-900' : 'hover:bg-gray-50 text-gray-700'}
-                                    `}
+                        filteredOptions.map((option) => {
+                            const isSelected = value === option.ManufacturerID
+                            const isHighlighted = highlightedIndex === filteredOptions.findIndex((item) => item.ManufacturerID === option.ManufacturerID)
+
+                            return (
+                                <button
+                                    key={option.ManufacturerID}
+                                    type="button"
+                                    onClick={() => handleSelect(option.ManufacturerID)}
+                                    onMouseEnter={() => setHighlightedIndex(filteredOptions.findIndex((item) => item.ManufacturerID === option.ManufacturerID))}
+                                    className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${isSelected ? 'bg-blue-50 text-blue-700' : isHighlighted ? 'bg-gray-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
                                 >
-                                    <AssetTypeIcon type={option} className="w-5 h-5 opacity-70" />
-                                    <span>{option}</span>
-                                </div>
-                            ))}
-                        </>
+                                    <Factory className="h-4 w-4 opacity-70" />
+                                    <span className="flex-1 truncate">{option.Name}</span>
+                                    {isSelected && <Check className="h-4 w-4" />}
+                                </button>
+                            )
+                        })
                     ) : (
-                        <div className="px-3 py-3 text-sm text-gray-400">No categories found</div>
+                        <div className="px-3 py-3 text-sm text-gray-400">No manufacturers found</div>
                     )}
                     </div>
                 </div>

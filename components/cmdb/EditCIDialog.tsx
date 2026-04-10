@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Edit2, Server, Barcode, HardDrive, MapPin, Activity, X, Search, Check, ChevronDown } from "lucide-react";
 import { updateConfigurationItem } from "@/app/actions/ci";
 import StorageLocationSelect from "@/components/StorageLocationSelect";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 export default function EditCIDialog({ ci, models }: { ci: any, models: any[] }) {
     const [open, setOpen] = useState(false);
@@ -21,6 +22,7 @@ export default function EditCIDialog({ ci, models }: { ci: any, models: any[] })
     const [selectedModel, setSelectedModel] = useState<any>(initialModel);
     const [storageLocationId, setStorageLocationId] = useState<string>(ci.StorageLocationID || "");
     const comboboxRef = useRef<HTMLDivElement>(null);
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setOpen(false), open);
 
     // Initial setup on open
     useEffect(() => {
@@ -90,7 +92,7 @@ export default function EditCIDialog({ ci, models }: { ci: any, models: any[] })
             </button>
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity text-left">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[600px] overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[600px] overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto">
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10">

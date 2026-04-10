@@ -4,13 +4,25 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { duplicateModel, deleteModel, checkModelDependencies } from "@/app/actions/models";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import AssetTypeIcon from "@/components/AssetTypeIcon";
 
-import { Copy, Loader2, Trash2, AlertTriangle, UserPlus, Search, Filter, ChevronDown, RefreshCcw, Settings, X, MapPin, FileSpreadsheet, FileText } from "lucide-react";
+import { Copy, Loader2, Trash2, AlertTriangle, UserPlus, Search, Filter, ChevronDown, RefreshCcw, Settings, X, MapPin, FileSpreadsheet, FileText, ExternalLink } from "lucide-react";
 import CreateModelDialog from "./CreateModelDialog";
 import EditModelDialog from "./EditModelDialog";
 import AddStockDialog from "./AddStockDialog";
 import AdjustInventoryDialog from "./AdjustInventoryDialog";
 import StockHistoryDialog from "./StockHistoryDialog";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
+
+const TABLE_ACTION_BUTTON_BASE =
+    "inline-flex h-8 min-w-[110px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-4 text-sm font-medium shadow-sm transition-colors";
+const TABLE_ACTION_BUTTON_SECONDARY =
+    `${TABLE_ACTION_BUTTON_BASE} border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900`;
+const TABLE_ACTION_BUTTON_PRIMARY =
+    `${TABLE_ACTION_BUTTON_BASE} bg-blue-600 text-white hover:bg-blue-700`;
+const TABLE_ACTION_BUTTON_PRIMARY_DISABLED =
+    `${TABLE_ACTION_BUTTON_BASE} cursor-not-allowed border border-gray-300 bg-gray-200 text-gray-500 opacity-60 grayscale shadow-none`;
 
 function getStockStatus(available: number, reorderLevel: number): {
     label: string;
@@ -388,6 +400,24 @@ function summarizeSelections(selectedValues: string[], options: { value: string;
     return `${selectedLabels[0]} +${selectedLabels.length - 1}`;
 }
 
+function getLastIntakeBadge(actionType: string | null | undefined) {
+    if (actionType === "OPENING_STOCK") {
+        return {
+            label: "Opening Stock",
+            className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        };
+    }
+
+    if (actionType === "ADD") {
+        return {
+            label: "Purchase",
+            className: "bg-green-50 text-green-700 border-green-200",
+        };
+    }
+
+    return null;
+}
+
 function MultiSelectFilter({
     label,
     options,
@@ -396,7 +426,7 @@ function MultiSelectFilter({
     allLabel,
 }: {
     label: string;
-    options: { value: string; label: string }[];
+    options: { value: string; label: string; iconType?: string }[];
     selectedValues: string[];
     onChange: (values: string[]) => void;
     allLabel: string;
@@ -483,6 +513,7 @@ function MultiSelectFilter({
                                         onChange={() => toggleValue(option.value)}
                                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                     />
+                                    {option.iconType && <AssetTypeIcon type={option.iconType} className="h-4 w-4 text-gray-500" />}
                                     <span className="truncate">{option.label}</span>
                                 </label>
                             );
@@ -512,6 +543,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     const [filterLocations, setFilterLocations] = useState<string[]>([]);
     const [filterColors, setFilterColors] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
+    const [assetTypes, setAssetTypes] = useState<{ Name: string }[]>([]);
 
     // --- Actions Dropdown State ---
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -539,6 +571,13 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                 if (Array.isArray(data)) setForecastData(data);
             })
             .catch(err => console.error("Failed to fetch forecast:", err));
+
+        fetch("/api/asset-types")
+            .then((res) => res.json())
+            .then((data) => {
+                if (Array.isArray(data)) setAssetTypes(data);
+            })
+            .catch((err) => console.error("Failed to fetch asset types:", err));
     }, []);
 
     function handleClone(modelId: string) {
@@ -598,16 +637,18 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     }
 
     // --- Derived Data for Filters ---
-    const categories = [
-        { value: "Laptop", label: "Laptop" },
-        { value: "Desktop", label: "Desktop" },
-        { value: "Monitor", label: "Monitor" },
-        { value: "Printer", label: "Printer" },
-        { value: "Consumable", label: "Consumable (Toner/Ink)" },
-        { value: "Mobile", label: "Mobile Phone" },
-        { value: "Tablet", label: "Tablet" },
-        { value: "Accessory", label: "Accessory" },
-    ];
+    const categories = Array.from(
+        new Set([
+            ...assetTypes.map((type) => type.Name).filter(Boolean),
+            ...models.map((model) => model.Category).filter(Boolean),
+        ])
+    )
+        .sort((left, right) => String(left).localeCompare(String(right)))
+        .map((name) => ({
+            value: name as string,
+            label: name as string,
+            iconType: name as string,
+        }));
     const statusOptions = [
         { value: "In Stock", label: "In Stock" },
         { value: "Out of Stock", label: "Out of Stock" },
@@ -1038,12 +1079,24 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         setFilterColors([]);
     }
 
+    function handleModelCreated(payload: { category: string; name: string }) {
+        setSearchQuery("");
+        setFilterManufacturers([]);
+        setFilterLocations([]);
+        setFilterStatuses([]);
+        setFilterColors([]);
+        setFilterCategories(payload.category ? [payload.category] : []);
+        setShowFilters(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    const deleteModalRef = useModalDismiss<HTMLDivElement>(() => setDeleteConfirmInfo(null), Boolean(deleteConfirmInfo));
+
     return (
         <div className="p-6 space-y-6">
             {/* Delete Confirmation Dialog */}
             {deleteConfirmInfo && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95">
+                    <div ref={deleteModalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95">
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-red-50/50">
                             <div className="flex gap-3">
                                 <div className="p-2 bg-red-100 text-red-600 rounded-lg">
@@ -1130,7 +1183,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                         Define abstract equipment models (e.g. Dell Latitude 5520).
                     </p>
                 </div>
-                <CreateModelDialog manufacturers={manufacturers} />
+                <CreateModelDialog manufacturers={manufacturers} onCreated={handleModelCreated} />
             </div>
 
             {/* ── Search & Filters Bar ── */}
@@ -1320,12 +1373,33 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                     <td className="p-4">
                                         <Link
                                             href={`/inventory/cmdb/models/${m.ModelID}`}
-                                            className="flex flex-col group block"
+                                            className="flex items-center gap-3 group"
                                         >
-                                            <span className="font-semibold text-blue-600 hover:text-blue-800 transition-colors group-hover:underline">
-                                                {m.Name}
-                                            </span>
-                                            {m.ModelNumber && <span className="text-xs text-muted-foreground mt-0.5">{m.ModelNumber}</span>}
+                                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                                                {m.ImageURL ? (
+                                                    <Image
+                                                        src={m.ImageURL}
+                                                        alt={m.Name}
+                                                        fill
+                                                        unoptimized
+                                                        sizes="48px"
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                                                        No image
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex min-w-0 flex-col">
+                                                <span className="font-semibold text-blue-600 hover:text-blue-800 transition-colors group-hover:underline truncate">
+                                                    {m.Name}
+                                                </span>
+                                                {m.ModelNumber && <span className="text-xs text-muted-foreground mt-0.5">{m.ModelNumber}</span>}
+                                                <span className="text-[11px] text-gray-400 mt-0.5">
+                                                    {m.ImageURL ? "Reference image saved" : "No reference image"}
+                                                </span>
+                                            </div>
                                         </Link>
                                     </td>
                                     <td className="p-4 relative">
@@ -1394,6 +1468,16 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                             <span className="text-[11px] text-gray-500 font-medium whitespace-nowrap mt-0.5">
                                                 {m.AssignedStock || 0} in use
                                             </span>
+                                            {(() => {
+                                                const lastIntake = getLastIntakeBadge(m.LastIncomingActionType);
+                                                if (!lastIntake) return null;
+
+                                                return (
+                                                    <span className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${lastIntake.className}`}>
+                                                        {lastIntake.label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                     </td>
                                     {/* ✅ Status badge - Low Stock Alert */}
@@ -1439,12 +1523,24 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                         </div>
                                     </td>
                                     <td className="p-4 text-right flex justify-end gap-2 items-center">
+                                        {m.ImageURL && (
+                                            <a
+                                                href={m.ImageURL}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className={TABLE_ACTION_BUTTON_SECONDARY}
+                                                title="View reference image"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                                <span>View Image</span>
+                                            </a>
+                                        )}
                                         {/* Primary Action Button */}
                                         <Link
                                             href={`/assign?modelId=${m.ModelID}`}
-                                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-8 px-4 gap-1.5 min-w-[90px] ${(m.AvailableStock || 0) <= 0
-                                                ? "bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300 opacity-60 grayscale shadow-none"
-                                                : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md"
+                                            className={`${(m.AvailableStock || 0) <= 0
+                                                ? TABLE_ACTION_BUTTON_PRIMARY_DISABLED
+                                                : TABLE_ACTION_BUTTON_PRIMARY
                                                 }`}
                                             title={(m.AvailableStock || 0) <= 0 ? "No stock available" : "Assign Device"}
                                             onClick={(e) => {
@@ -1459,9 +1555,9 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                         <div className="relative action-dropdown-container">
                                             <button
                                                 onClick={() => setOpenDropdownId(openDropdownId === m.ModelID ? null : m.ModelID)}
-                                                className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border shadow-sm h-8 px-3 gap-1.5 ${openDropdownId === m.ModelID
+                                                className={`${TABLE_ACTION_BUTTON_SECONDARY} ${openDropdownId === m.ModelID
                                                     ? "bg-gray-100 text-gray-900 border-gray-300"
-                                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                                                    : ""
                                                     }`}
                                             >
                                                 <Settings className="h-4 w-4" />

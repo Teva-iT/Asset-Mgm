@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ModernDatePicker from './ModernDatePicker'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 interface MarkLeavingButtonProps {
     employeeId: string
@@ -15,6 +16,7 @@ export default function MarkLeavingButton({ employeeId, employeeName, currentSta
     const [endDate, setEndDate] = useState('')
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setShowModal(false), showModal)
 
     const handleMarkLeaving = async () => {
         if (!endDate) {
@@ -74,7 +76,7 @@ export default function MarkLeavingButton({ employeeId, employeeName, currentSta
                     justifyContent: 'center',
                     zIndex: 1000
                 }}>
-                    <div style={{
+                    <div ref={modalRef} style={{
                         background: 'white',
                         padding: '2rem',
                         borderRadius: '12px',

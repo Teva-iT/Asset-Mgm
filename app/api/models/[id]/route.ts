@@ -25,5 +25,33 @@ export async function GET(
 
     if (!model) return NextResponse.json({ error: 'Model not found' }, { status: 404 })
 
-    return NextResponse.json({ model, history: history || [] })
+    const { data: photos, error: photosError } = await supabase
+        .from("ModelPhoto")
+        .select("*")
+        .eq("ModelID", modelId)
+        .order("SortOrder", { ascending: true })
+        .order("createdAt", { ascending: true });
+
+    const mergedPhotos = [...(photos || [])];
+    if (model.ImageURL && !mergedPhotos.some((photo) => photo.URL === model.ImageURL)) {
+        mergedPhotos.unshift({
+            PhotoID: `legacy-${model.ModelID}`,
+            ModelID: model.ModelID,
+            URL: model.ImageURL,
+            Category: "Reference",
+            SortOrder: -1,
+        });
+    }
+
+    if (photosError) {
+        console.warn("ModelPhoto lookup unavailable in /api/models/[id]:", photosError.message);
+    }
+
+    return NextResponse.json({
+        model: {
+            ...model,
+            ModelPhotos: mergedPhotos,
+        },
+        history: history || [],
+    })
 }

@@ -5,7 +5,20 @@ import { useRouter } from "next/navigation";
 import { Plus, PackagePlus, Calendar, Box, StickyNote, X, MapPin } from "lucide-react";
 import { addStockAction } from "@/app/actions/models";
 import StorageLocationSelect from "@/components/StorageLocationSelect";
-import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
+
+const STOCK_ENTRY_TYPES = [
+    {
+        value: "purchase",
+        label: "New Purchase / Arrival",
+        helper: "Use this when new units were actually bought or delivered now.",
+    },
+    {
+        value: "opening_stock",
+        label: "Existing Stock Already On Hand",
+        helper: "Use this when the company already had these units and you are registering them in the system for the first time.",
+    },
+];
 
 export default function AddStockDialog({
     model,
@@ -20,14 +33,16 @@ export default function AddStockDialog({
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [entryType, setEntryType] = useState("purchase");
 
-    useEscapeKey(() => {
+    const modalRef = useModalDismiss<HTMLDivElement>(() => {
         setOpen(false);
         resetForm();
     }, open);
 
     function resetForm() {
         setError("");
+        setEntryType("purchase");
     }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -38,6 +53,7 @@ export default function AddStockDialog({
 
         const formData = new FormData(e.currentTarget);
         formData.set("modelId", model.ModelID);
+        formData.set("entryType", entryType);
 
         try {
             const res = await addStockAction(formData);
@@ -71,10 +87,11 @@ export default function AddStockDialog({
             </button>
 
             {open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] overflow-hidden border border-gray-100">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+                    <div className="flex min-h-full items-start justify-center p-4 sm:items-center">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] max-h-[calc(100vh-2rem)] overflow-hidden border border-gray-100 flex flex-col">
                         {/* Header */}
-                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 flex-shrink-0">
                             <div className="flex gap-3">
                                 <div className="p-2 bg-green-100 text-green-600 rounded-lg">
                                     <PackagePlus className="h-5 w-5" />
@@ -89,7 +106,7 @@ export default function AddStockDialog({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
                             {error && (
                                 <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-md text-sm">
                                     {error}
@@ -123,10 +140,30 @@ export default function AddStockDialog({
                                 <p className="text-xs text-gray-400">Number of units being added to stock.</p>
                             </div>
 
+                            <div className="grid gap-1.5">
+                                <label className="text-sm font-medium text-gray-700">Stock Entry Type</label>
+                                <div className="grid gap-2">
+                                    {STOCK_ENTRY_TYPES.map((option) => {
+                                        const active = entryType === option.value;
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() => setEntryType(option.value)}
+                                                className={`text-left rounded-lg border px-3 py-2 transition-colors ${active ? "border-green-500 bg-green-50" : "border-gray-200 bg-white hover:border-gray-300"}`}
+                                            >
+                                                <div className={`text-sm font-semibold ${active ? "text-green-700" : "text-gray-800"}`}>{option.label}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">{option.helper}</div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             {/* Purchase Date */}
                             <div className="grid gap-1.5">
                                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                    <Calendar className="h-3.5 w-3.5 text-gray-400" /> Purchase / Arrival Date
+                                    <Calendar className="h-3.5 w-3.5 text-gray-400" /> {entryType === "opening_stock" ? "Counted / Known Since" : "Purchase / Arrival Date"}
                                 </label>
                                 <input
                                     name="purchaseDate"
@@ -134,6 +171,11 @@ export default function AddStockDialog({
                                     defaultValue={new Date().toISOString().split('T')[0]}
                                     className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                 />
+                                <p className="text-xs text-gray-400">
+                                    {entryType === "opening_stock"
+                                        ? "Optional date for when this previously existing stock was counted or first recognized in the system."
+                                        : "Optional purchase or delivery date for the newly received stock."}
+                                </p>
                             </div>
 
 
@@ -145,13 +187,15 @@ export default function AddStockDialog({
                                 <textarea
                                     name="notes"
                                     rows={2}
-                                    placeholder="Order number, supplier, delivery reference..."
+                                    placeholder={entryType === "opening_stock"
+                                        ? "Where these units were found, estimated age, previous tracking notes..."
+                                        : "Order number, supplier, delivery reference..."}
                                     className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-300"
                                 />
                             </div>
 
                             {/* Actions */}
-                            <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
+                            <div className="sticky bottom-0 -mx-6 mt-2 flex justify-end items-center gap-3 border-t border-gray-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
                                 <button
                                     type="button"
                                     onClick={() => { setOpen(false); resetForm(); }}
@@ -169,6 +213,7 @@ export default function AddStockDialog({
                                 </button>
                             </div>
                         </form>
+                    </div>
                     </div>
                 </div>
             )}

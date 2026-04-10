@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 import {
     AlertTriangle,
     ArrowRight,
@@ -447,6 +448,7 @@ function AlertRulesPanel({ onUpdate, showToast }: { onUpdate: () => void, showTo
     const [models, setModels] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setShowModal(false), showModal)
     const [editingRule, setEditingRule] = useState<any>(null)
     const [targetType, setTargetType] = useState<'model' | 'category'>('model')
     const [formData, setFormData] = useState({
@@ -564,7 +566,7 @@ function AlertRulesPanel({ onUpdate, showToast }: { onUpdate: () => void, showTo
             {/* Simple Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div ref={modalRef} className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-2xl font-black text-gray-900 mb-6 tracking-tight">{editingRule ? 'Edit Alert Rule' : 'Create Alert Rule'}</h3>
                         <form onSubmit={handleSave} className="space-y-6">
                             <div className="space-y-2">

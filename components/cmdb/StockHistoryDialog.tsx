@@ -2,17 +2,24 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { History, X, Plus, Minus, RefreshCw, Search, Filter, ChevronDown } from "lucide-react";
-import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 const ACTION_META: Record<string, { color: string; label: string; icon: any }> = {
     ADD: { icon: Plus, color: "text-green-700 bg-green-50 border-green-200", label: "Purchase" },
+    OPENING_STOCK: { icon: Plus, color: "text-emerald-700 bg-emerald-50 border-emerald-200", label: "Opening Stock" },
     ASSIGN: { icon: Minus, color: "text-blue-700 bg-blue-50 border-blue-200", label: "Assigned" },
     RETURN: { icon: RefreshCw, color: "text-indigo-700 bg-indigo-50 border-indigo-200", label: "Returned" },
     ADJUST: { icon: RefreshCw, color: "text-orange-700 bg-orange-50 border-orange-200", label: "Adjusted" },
+    ADJUST_OPENING_STOCK: { icon: RefreshCw, color: "text-amber-700 bg-amber-50 border-amber-200", label: "Adjust Opening Stock" },
+    ADJUST_PURCHASE: { icon: RefreshCw, color: "text-orange-700 bg-orange-50 border-orange-200", label: "Adjust Purchase Stock" },
     LOCATION_CHANGE: { icon: RefreshCw, color: "text-purple-700 bg-purple-50 border-purple-200", label: "Relocated" },
 };
 
-const ALL_TYPES = ["ADD", "ASSIGN", "RETURN", "ADJUST", "LOCATION_CHANGE"];
+const ALL_TYPES = ["ADD", "OPENING_STOCK", "ASSIGN", "RETURN", "ADJUST_OPENING_STOCK", "ADJUST_PURCHASE", "LOCATION_CHANGE"];
+const INTAKE_SCOPES = [
+    { value: "purchase", label: "Purchase Flow" },
+    { value: "opening_stock", label: "Opening Stock Flow" },
+];
 
 export default function StockHistoryDialog({
     model,
@@ -30,12 +37,13 @@ export default function StockHistoryDialog({
     // ─── Filter state ───────────────────────────────
     const [search, setSearch] = useState("");
     const [filterType, setFilterType] = useState<string[]>([]);
+    const [filterIntakeScope, setFilterIntakeScope] = useState("");
     const [filterLoc, setFilterLoc] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [showFilters, setShowFilters] = useState(false);
 
-    useEscapeKey(() => setOpen(false), open);
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setOpen(false), open);
 
     // ─── Load records ────────────────────────────────
     useEffect(() => {
@@ -73,21 +81,23 @@ export default function StockHistoryDialog({
             const text = `${r.ActionType} ${r.Notes || ""} ${r.StorageLocation?.Name || ""}`.toLowerCase();
             if (search && !text.includes(search.toLowerCase())) return false;
             if (filterType.length && !filterType.includes(r.ActionType)) return false;
+            if (filterIntakeScope === "purchase" && !["ADD", "ADJUST_PURCHASE"].includes(r.ActionType)) return false;
+            if (filterIntakeScope === "opening_stock" && !["OPENING_STOCK", "ADJUST_OPENING_STOCK"].includes(r.ActionType)) return false;
             if (filterLoc && r.StorageLocation?.Name !== filterLoc) return false;
             if (fromDate && new Date(r.CreatedAt) < new Date(fromDate)) return false;
             if (toDate && new Date(r.CreatedAt) > new Date(toDate + "T23:59:59")) return false;
             return true;
         });
-    }, [records, search, filterType, filterLoc, fromDate, toDate]);
+    }, [records, search, filterType, filterIntakeScope, filterLoc, fromDate, toDate]);
 
-    const activeFilterCount = (filterType.length ? 1 : 0) + (filterLoc ? 1 : 0) + (fromDate || toDate ? 1 : 0);
+    const activeFilterCount = (filterType.length ? 1 : 0) + (filterIntakeScope ? 1 : 0) + (filterLoc ? 1 : 0) + (fromDate || toDate ? 1 : 0);
 
     function toggleType(t: string) {
         setFilterType(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
     }
 
     function clearAll() {
-        setSearch(""); setFilterType([]); setFilterLoc(""); setFromDate(""); setToDate("");
+        setSearch(""); setFilterType([]); setFilterIntakeScope(""); setFilterLoc(""); setFromDate(""); setToDate("");
     }
 
     return (
@@ -119,7 +129,7 @@ export default function StockHistoryDialog({
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[760px] max-h-[88vh] flex flex-col overflow-hidden border border-gray-100">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[760px] max-h-[88vh] flex flex-col overflow-hidden border border-gray-100">
 
                         {/* ── Header ── */}
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/60 flex-shrink-0">
@@ -218,6 +228,20 @@ export default function StockHistoryDialog({
                                         </select>
                                     </div>
                                 )}
+
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Opening vs Purchase</p>
+                                    <select
+                                        value={filterIntakeScope}
+                                        onChange={e => setFilterIntakeScope(e.target.value)}
+                                        className="text-sm border border-gray-200 rounded-lg bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                        <option value="">All Intake Flows</option>
+                                        {INTAKE_SCOPES.map((scope) => (
+                                            <option key={scope.value} value={scope.value}>{scope.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
                                 {/* Date range */}
                                 <div>

@@ -3,6 +3,108 @@
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
+type ModelPhotoInput = {
+    url?: string;
+    URL?: string;
+    category?: string;
+    Category?: string;
+};
+
+function normalizeModelPhotoPayload(rawValue: FormDataEntryValue | null) {
+    if (!rawValue) return [];
+
+    try {
+        const parsed = JSON.parse(rawValue.toString());
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed
+            .map((photo: ModelPhotoInput, index: number) => ({
+                URL: photo.URL || photo.url || "",
+                Category: photo.Category || photo.category || "Reference",
+                SortOrder: index,
+            }))
+            .filter((photo) => Boolean(photo.URL));
+    } catch (error) {
+        console.error("Failed to parse model photo payload:", error);
+        return [];
+    }
+}
+
+function mergeLegacyImageWithPhotos(model: any, photos: any[]) {
+    const normalizedPhotos = Array.isArray(photos) ? [...photos] : [];
+    const hasPrimaryPhoto = normalizedPhotos.some((photo) => photo.URL === model.ImageURL);
+
+    if (model.ImageURL && !hasPrimaryPhoto) {
+        normalizedPhotos.unshift({
+            PhotoID: `legacy-${model.ModelID}`,
+            ModelID: model.ModelID,
+            URL: model.ImageURL,
+            Category: "Reference",
+            SortOrder: -1,
+        });
+    }
+
+    return normalizedPhotos.sort((left, right) => {
+        const leftOrder = typeof left.SortOrder === "number" ? left.SortOrder : 9999;
+        const rightOrder = typeof right.SortOrder === "number" ? right.SortOrder : 9999;
+        return leftOrder - rightOrder;
+    });
+}
+
+async function fetchModelPhotos(modelIds: string[]) {
+    const validIds = modelIds.filter(Boolean);
+    if (validIds.length === 0) return new Map<string, any[]>();
+
+    const { data, error } = await supabase
+        .from("ModelPhoto")
+        .select("*")
+        .in("ModelID", validIds)
+        .order("SortOrder", { ascending: true })
+        .order("createdAt", { ascending: true });
+
+    if (error) {
+        console.warn("ModelPhoto lookup unavailable, falling back to ImageURL only:", error.message);
+        return new Map<string, any[]>();
+    }
+
+    return (data || []).reduce((map, photo: any) => {
+        const current = map.get(photo.ModelID) || [];
+        current.push(photo);
+        map.set(photo.ModelID, current);
+        return map;
+    }, new Map<string, any[]>());
+}
+
+async function syncModelPhotos(modelId: string, rawValue: FormDataEntryValue | null, fallbackPrimaryUrl: string | null) {
+    const normalizedPhotos = normalizeModelPhotoPayload(rawValue);
+    const photosToPersist = normalizedPhotos.length > 0
+        ? normalizedPhotos
+        : (fallbackPrimaryUrl ? [{ URL: fallbackPrimaryUrl, Category: "Reference", SortOrder: 0 }] : []);
+
+    const deleteResult = await supabase.from("ModelPhoto").delete().eq("ModelID", modelId);
+    if (deleteResult.error) {
+        console.warn("ModelPhoto delete skipped:", deleteResult.error.message);
+        return;
+    }
+
+    if (photosToPersist.length === 0) return;
+
+    const insertResult = await supabase.from("ModelPhoto").insert(
+        photosToPersist.map((photo) => ({
+            PhotoID: crypto.randomUUID(),
+            ModelID: modelId,
+            URL: photo.URL,
+            Category: photo.Category || "Reference",
+            SortOrder: photo.SortOrder ?? 0,
+            UploadedBy: null,
+        }))
+    );
+
+    if (insertResult.error) {
+        console.warn("ModelPhoto insert skipped:", insertResult.error.message);
+    }
+}
+
 // Fetch all models
 export async function getAssetModels() {
     try {
@@ -12,7 +114,7 @@ export async function getAssetModels() {
 
         const mfrsRes = await supabase.from("Manufacturer").select("ManufacturerID, Name");
         const assetsRes = await supabase.from("Asset").select("ModelID, StorageLocationID");
-        const invRes = await supabase.from("InventoryRecord").select("ModelID, StorageLocationID");
+        const invRes = await supabase.from("InventoryRecord").select("ModelID, StorageLocationID, ActionType, CreatedAt");
         const locsRes = await supabase.from("StorageLocation").select("LocationID, Name");
 
         if (modelsRes.error) {
@@ -25,6 +127,7 @@ export async function getAssetModels() {
         const assets = assetsRes.data || [];
         const inventory = invRes.data || [];
         const locations = locsRes.data || [];
+        const photoMap = await fetchModelPhotos(models.map((model: any) => model.ModelID));
 
         // Map location IDs to names
         const locMap: Record<string, string> = {};
@@ -56,10 +159,16 @@ export async function getAssetModels() {
             const modelLocationNames = Array.from(modelLocIds)
                 .map(id => locMap[id])
                 .filter(Boolean);
+            const modelPhotos = mergeLegacyImageWithPhotos(m, photoMap.get(m.ModelID) || []);
+            const latestIncomingRecord = inventory
+                .filter((inv: any) => inv.ModelID === m.ModelID && ["ADD", "OPENING_STOCK"].includes(inv.ActionType))
+                .sort((left: any, right: any) => new Date(right.CreatedAt).getTime() - new Date(left.CreatedAt).getTime())[0] || null;
 
             return {
                 ...m,
                 Manufacturer: manufacturer,
+                ModelPhotos: modelPhotos,
+                LastIncomingActionType: latestIncomingRecord?.ActionType || null,
                 DefaultLocationName: defaultLocName,
                 locations: modelLocationNames,
                 _count: {
@@ -81,6 +190,12 @@ export async function duplicateModel(modelId: string) {
             .select("*")
             .eq("ModelID", modelId)
             .single();
+        const { data: existingPhotos } = await supabase
+            .from("ModelPhoto")
+            .select("*")
+            .eq("ModelID", modelId)
+            .order("SortOrder", { ascending: true })
+            .order("createdAt", { ascending: true });
 
         if (fetchError || !existing) {
             return { success: false, error: "Model not found" };
@@ -95,11 +210,14 @@ export async function duplicateModel(modelId: string) {
             ManufacturerID: existing.ManufacturerID,
             Description: existing.Description,
             ImageURL: existing.ImageURL,
+            PurchaseDate: existing.PurchaseDate,
             EOLDate: existing.EOLDate,
             updatedAt: new Date().toISOString()
         });
 
         if (insertError) throw insertError;
+
+        await syncModelPhotos(newId, JSON.stringify(existingPhotos || []), existing.ImageURL || null);
 
         return { success: true, newModelId: newId };
     } catch (error) {
@@ -121,6 +239,12 @@ export async function createModelAction(formData: FormData) {
 
     try {
         const newId = crypto.randomUUID();
+        const primaryImageUrl = formData.get("imageUrl")?.toString() || null;
+        const purchaseDate = formData.get("purchaseDate")?.toString() || null;
+        const initialExistingStockStr = formData.get("initialExistingStock")?.toString() || "0";
+        const initialExistingStock = Math.max(0, parseInt(initialExistingStockStr, 10) || 0);
+        const initialExistingStockDate = formData.get("initialExistingStockDate")?.toString() || null;
+        const initialExistingStockNotes = formData.get("initialExistingStockNotes")?.toString() || null;
         const { error } = await supabase.from("AssetModel").insert({
             ModelID: newId,
             Name: name,
@@ -128,7 +252,11 @@ export async function createModelAction(formData: FormData) {
             ManufacturerID: manufacturerId,
             Category: category,
             Color: formData.get("color")?.toString() || null,
-            ImageURL: formData.get("imageUrl")?.toString() || null,
+            ImageURL: primaryImageUrl,
+            PurchaseDate: purchaseDate ? new Date(purchaseDate).toISOString() : null,
+            TotalStock: initialExistingStock,
+            AvailableStock: initialExistingStock,
+            AssignedStock: 0,
             Status: formData.get("status")?.toString() || null,
             DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,
             updatedAt: new Date().toISOString()
@@ -139,7 +267,29 @@ export async function createModelAction(formData: FormData) {
             return { success: false, error: error.message };
         }
 
+        await syncModelPhotos(newId, formData.get("photos"), primaryImageUrl);
+
+        if (initialExistingStock > 0) {
+            const { error: openingStockError } = await supabase
+                .from("InventoryRecord")
+                .insert({
+                    RecordID: crypto.randomUUID(),
+                    ModelID: newId,
+                    Quantity: initialExistingStock,
+                    ActionType: "OPENING_STOCK",
+                    PurchaseDate: initialExistingStockDate ? new Date(initialExistingStockDate).toISOString() : null,
+                    StorageLocationID: formData.get("defaultLocationId")?.toString() || null,
+                    Notes: initialExistingStockNotes || "Initial existing stock captured during model creation",
+                    CreatedAt: new Date().toISOString()
+                });
+
+            if (openingStockError) {
+                console.error("Model created but opening stock history failed:", openingStockError);
+            }
+        }
+
         revalidatePath("/inventory/cmdb/models");
+        revalidatePath(`/inventory/cmdb/models/${newId}`);
         return { success: true, newModelId: newId };
     } catch (error: any) {
         console.error("Error creating model:", error);
@@ -161,13 +311,32 @@ export async function updateModelAction(modelId: string, formData: FormData) {
     }
 
     try {
+        const primaryImageUrl = formData.get("imageUrl")?.toString() || null;
+        const purchaseDate = formData.get("purchaseDate")?.toString() || null;
+        const initialExistingStockStr = formData.get("initialExistingStock")?.toString() || "0";
+        const initialExistingStock = Math.max(0, parseInt(initialExistingStockStr, 10) || 0);
+        const initialExistingStockDate = formData.get("initialExistingStockDate")?.toString() || null;
+        const initialExistingStockNotes = formData.get("initialExistingStockNotes")?.toString() || null;
+        const { data: existingModel, error: existingModelError } = await supabase
+            .from("AssetModel")
+            .select("TotalStock, AvailableStock, AssignedStock")
+            .eq("ModelID", modelId)
+            .single();
+
+        if (existingModelError || !existingModel) {
+            return { success: false, error: "Model not found" };
+        }
+
         const { error } = await supabase.from("AssetModel").update({
             Name: name,
             Series: series,
             ManufacturerID: manufacturerId,
             Category: category,
             Color: formData.get("color")?.toString() || null,
-            ImageURL: formData.get("imageUrl")?.toString() || null,
+            ImageURL: primaryImageUrl,
+            PurchaseDate: purchaseDate ? new Date(purchaseDate).toISOString() : null,
+            TotalStock: existingModel.TotalStock === 0 && initialExistingStock > 0 ? initialExistingStock : existingModel.TotalStock,
+            AvailableStock: existingModel.TotalStock === 0 && initialExistingStock > 0 ? initialExistingStock : existingModel.AvailableStock,
             Status: formData.get("status")?.toString() || null,
             ReorderLevel: reorderLevel,
             DefaultLocationID: formData.get("defaultLocationId")?.toString() || null,
@@ -179,7 +348,29 @@ export async function updateModelAction(modelId: string, formData: FormData) {
             return { success: false, error: error.message };
         }
 
+        await syncModelPhotos(modelId, formData.get("photos"), primaryImageUrl);
+
+        if (existingModel.TotalStock === 0 && initialExistingStock > 0) {
+            const { error: openingStockError } = await supabase
+                .from("InventoryRecord")
+                .insert({
+                    RecordID: crypto.randomUUID(),
+                    ModelID: modelId,
+                    Quantity: initialExistingStock,
+                    ActionType: "OPENING_STOCK",
+                    PurchaseDate: initialExistingStockDate ? new Date(initialExistingStockDate).toISOString() : null,
+                    StorageLocationID: formData.get("defaultLocationId")?.toString() || null,
+                    Notes: initialExistingStockNotes || "Initial existing stock captured during model edit",
+                    CreatedAt: new Date().toISOString()
+                });
+
+            if (openingStockError) {
+                console.error("Model updated but opening stock history failed:", openingStockError);
+            }
+        }
+
         revalidatePath("/inventory/cmdb/models");
+        revalidatePath(`/inventory/cmdb/models/${modelId}`);
         return { success: true };
     } catch (error: any) {
         console.error("Error updating model:", error);
@@ -248,6 +439,7 @@ export async function addStockAction(formData: FormData) {
     const purchaseDate = formData.get("purchaseDate")?.toString() || null;
     const storageLocationId = formData.get("storageLocationId")?.toString() || null;
     const notes = formData.get("notes")?.toString() || null;
+    const entryType = formData.get("entryType")?.toString() || "purchase";
 
     if (!modelId || !quantityStr) {
         return { success: false, error: "Missing required fields" };
@@ -291,7 +483,7 @@ export async function addStockAction(formData: FormData) {
                 RecordID: crypto.randomUUID(),
                 ModelID: modelId,
                 Quantity: quantity,
-                ActionType: "ADD",
+                ActionType: entryType === "opening_stock" ? "OPENING_STOCK" : "ADD",
                 PurchaseDate: purchaseDate,
                 StorageLocationID: effectiveLocationId,
                 Notes: notes,
@@ -318,6 +510,7 @@ export async function adjustStockAction(formData: FormData) {
     const storageLocationId = formData.get("storageLocationId")?.toString();
     const reason = formData.get("reason")?.toString() || "adjustment";
     const notes = formData.get("notes")?.toString() || null;
+    const adjustmentScope = formData.get("adjustmentScope")?.toString() || "opening_stock";
 
     if (!modelId || newStockStr === undefined || differenceStr === undefined) {
         return { success: false, error: "Missing required fields" };
@@ -361,7 +554,9 @@ export async function adjustStockAction(formData: FormData) {
         }
 
         // Log the adjustment (includes location-only changes)
-        const actionType = difference === 0 ? "LOCATION_CHANGE" : "ADJUST";
+        const actionType = difference === 0
+            ? "LOCATION_CHANGE"
+            : (adjustmentScope === "purchase" ? "ADJUST_PURCHASE" : "ADJUST_OPENING_STOCK");
         const effectiveLocationId = storageLocationId || model.DefaultLocationID;
 
         await supabase.from("InventoryRecord").insert({
@@ -370,7 +565,7 @@ export async function adjustStockAction(formData: FormData) {
             Quantity: difference,
             ActionType: actionType,
             StorageLocationID: effectiveLocationId,
-            Notes: `Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
+            Notes: `Scope: ${adjustmentScope === "purchase" ? "Purchase Stock" : "Opening Stock"} | Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
             CreatedAt: new Date().toISOString()
         });
 

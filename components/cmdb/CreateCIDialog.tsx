@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Server, Barcode, HardDrive, MapPin, Activity, X, Search, Check, ChevronDown } from "lucide-react";
 import { createConfigurationItem } from "@/app/actions/ci";
 import StorageLocationSelect from "@/components/StorageLocationSelect";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 export default function CreateCIDialog({ models }: { models: any[] }) {
     const [open, setOpen] = useState(false);
@@ -17,6 +18,7 @@ export default function CreateCIDialog({ models }: { models: any[] }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedModel, setSelectedModel] = useState<any>(null);
     const comboboxRef = useRef<HTMLDivElement>(null);
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setOpen(false), open);
 
     // Filter models based on search
     const filteredModels = searchQuery === ""
@@ -78,7 +80,7 @@ export default function CreateCIDialog({ models }: { models: any[] }) {
             </button>
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[600px] overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[600px] overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto">
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10">

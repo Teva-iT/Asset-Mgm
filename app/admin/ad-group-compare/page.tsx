@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, GitCompare, ShieldAlert, CheckCircle2, X, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ADUser { username: string; displayName: string; dn?: string }
@@ -177,6 +178,7 @@ export default function ADGroupComparePage() {
     const [selectedRemove, setSelectedRemove] = useState<Set<string>>(new Set())
 
     const [showModal, setShowModal] = useState(false)
+    const confirmModalRef = useModalDismiss<HTMLDivElement>(() => setShowModal(false), showModal)
     const [applying, setApplying] = useState(false)
     const [syncDetail, setSyncDetail] = useState<SyncDetail | null>(null)
     const [applyResult, setApplyResult] = useState<{ status: 'success' | 'partial' | 'failed'; added: number; removed: number; failed: string[] } | null>(null)
@@ -411,7 +413,7 @@ export default function ADGroupComparePage() {
             {/* Confirm Modal */}
             {showModal && result && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                    <div ref={confirmModalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
                                 <ShieldAlert className="w-5 h-5 text-orange-600" />

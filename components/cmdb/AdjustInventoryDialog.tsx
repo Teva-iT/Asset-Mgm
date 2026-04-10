@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { SlidersHorizontal, X, MapPin } from "lucide-react";
 import { adjustStockAction } from "@/app/actions/models";
 import StorageLocationSelect from "@/components/StorageLocationSelect";
-import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 const REASONS = [
     { value: "location_change", label: "Location Change / Relocation" },
@@ -13,6 +13,19 @@ const REASONS = [
     { value: "damaged", label: "Damaged / Broken" },
     { value: "lost", label: "Lost / Missing" },
     { value: "other", label: "Other" },
+];
+
+const ADJUSTMENT_SCOPES = [
+    {
+        value: "opening_stock",
+        label: "Opening Stock",
+        helper: "Use this when the correction belongs to previously existing stock that was already on hand.",
+    },
+    {
+        value: "purchase",
+        label: "Purchase Stock",
+        helper: "Use this when the correction belongs to newly purchased or newly received stock.",
+    },
 ];
 
 export default function AdjustInventoryDialog({
@@ -30,17 +43,19 @@ export default function AdjustInventoryDialog({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [newStock, setNewStock] = useState<number>(model.TotalStock || 0);
+    const [adjustmentScope, setAdjustmentScope] = useState("opening_stock");
 
     const currentStock = model.TotalStock || 0;
     const diff = newStock - currentStock;
     const diffLabel = diff > 0 ? `+${diff}` : `${diff}`;
     const diffColor = diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-gray-400";
 
-    useEscapeKey(() => setOpen(false), open);
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setOpen(false), open);
 
     function resetForm() {
         setNewStock(model.TotalStock || 0);
         setError("");
+        setAdjustmentScope("opening_stock");
     }
 
     async function formAction(formData: FormData) {
@@ -51,6 +66,7 @@ export default function AdjustInventoryDialog({
         formData.set("currentStock", String(currentStock));
         formData.set("newStock", String(newStock));
         formData.set("difference", String(diff));
+        formData.set("adjustmentScope", adjustmentScope);
 
         startTransition(async () => {
             try {
@@ -92,9 +108,10 @@ export default function AdjustInventoryDialog({
             )}
 
             {open && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[440px] overflow-hidden border border-gray-100">
-                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+                <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/40 backdrop-blur-sm">
+                    <div className="flex min-h-full items-start justify-center p-4 sm:items-center">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[440px] max-h-[calc(100vh-2rem)] overflow-hidden border border-gray-100 flex flex-col">
+                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 flex-shrink-0">
                             <div className="flex gap-3">
                                 <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
                                     <SlidersHorizontal className="h-5 w-5" />
@@ -109,7 +126,7 @@ export default function AdjustInventoryDialog({
                             </button>
                         </div>
 
-                        <form action={formAction} className="p-6 space-y-5">
+                        <form action={formAction} className="p-6 space-y-5 overflow-y-auto">
                             {error && (
                                 <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-md text-sm">{error}</div>
                             )}
@@ -146,6 +163,26 @@ export default function AdjustInventoryDialog({
                                 />
                             </div>
 
+                            <div className="grid gap-1.5">
+                                <label className="text-sm font-semibold text-gray-700">Adjustment Applies To</label>
+                                <div className="grid gap-2">
+                                    {ADJUSTMENT_SCOPES.map((option) => {
+                                        const active = adjustmentScope === option.value;
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() => setAdjustmentScope(option.value)}
+                                                className={`text-left rounded-lg border px-3 py-2 transition-colors ${active ? "border-orange-500 bg-orange-50" : "border-gray-200 bg-white hover:border-gray-300"}`}
+                                            >
+                                                <div className={`text-sm font-semibold ${active ? "text-orange-700" : "text-gray-800"}`}>{option.label}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">{option.helper}</div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
 
                             {/* Reason */}
                             <div className="grid gap-1.5">
@@ -175,7 +212,7 @@ export default function AdjustInventoryDialog({
                                 />
                             </div>
 
-                            <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
+                            <div className="sticky bottom-0 -mx-6 mt-2 flex justify-end items-center gap-3 border-t border-gray-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
                                 <button type="button" onClick={() => setOpen(false)} disabled={isSubmitting || isPending}
                                     className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
                                     Cancel
@@ -186,6 +223,7 @@ export default function AdjustInventoryDialog({
                                 </button>
                             </div>
                         </form>
+                    </div>
                     </div>
                 </div>
             )}

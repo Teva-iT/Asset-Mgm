@@ -2,14 +2,17 @@
 
 import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Package, TrendingUp, BarChart2, History, Plus, Minus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, BarChart2, History, Plus, Minus, RefreshCw, ExternalLink, CalendarDays } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const ACTION_META: Record<string, { color: string; label: string; icon: any }> = {
     ADD: { icon: Plus, color: "text-green-700 bg-green-50", label: "Purchase" },
+    OPENING_STOCK: { icon: Plus, color: "text-emerald-700 bg-emerald-50", label: "Opening Stock" },
     ASSIGN: { icon: Minus, color: "text-blue-700 bg-blue-50", label: "Assigned" },
     RETURN: { icon: RefreshCw, color: "text-indigo-700 bg-indigo-50", label: "Returned" },
     ADJUST: { icon: RefreshCw, color: "text-orange-700 bg-orange-50", label: "Adjusted" },
+    ADJUST_OPENING_STOCK: { icon: RefreshCw, color: "text-amber-700 bg-amber-50", label: "Adjust Opening Stock" },
+    ADJUST_PURCHASE: { icon: RefreshCw, color: "text-orange-700 bg-orange-50", label: "Adjust Purchase Stock" },
     LOCATION_CHANGE: { icon: RefreshCw, color: "text-purple-700 bg-purple-50", label: "Relocated" },
 };
 
@@ -88,11 +91,16 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
     const router = useRouter();
     const [data, setData] = useState<{ model: any; history: any[] } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
         fetch(`/api/models/${modelId}`)
             .then(r => r.json())
-            .then(setData)
+            .then((payload) => {
+                setData(payload);
+                const firstPhoto = payload?.model?.ModelPhotos?.[0]?.URL || payload?.model?.ImageURL || null;
+                setSelectedImageUrl(firstPhoto);
+            })
             .catch(() => setData(null))
             .finally(() => setLoading(false));
     }, [modelId]);
@@ -115,6 +123,10 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
     );
 
     const { model, history } = data;
+    const referencePhotos = Array.isArray(model.ModelPhotos) && model.ModelPhotos.length > 0
+        ? model.ModelPhotos
+        : (model.ImageURL ? [{ URL: model.ImageURL, Category: "Reference" }] : []);
+    const activeImageUrl = selectedImageUrl || referencePhotos[0]?.URL || null;
     const recentHistory = [...history].reverse().slice(0, 20);
 
     const stockStatus = (() => {
@@ -155,10 +167,23 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
 
             {/* Model Image and Stats */}
             <div className="flex flex-col md:flex-row gap-6">
-                {model.ImageURL && (
-                    <div className="relative w-full md:w-64 aspect-square bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
-                        <Image src={model.ImageURL} alt={model.Name} fill unoptimized sizes="(max-width: 768px) 100vw, 256px" className="w-full h-full object-contain p-2" />
-                    </div>
+                {activeImageUrl && (
+                    <a
+                        href={activeImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group relative w-full md:w-64 aspect-square bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex-shrink-0 block"
+                        title="Open reference image"
+                    >
+                        <Image src={activeImageUrl} alt={model.Name} fill unoptimized sizes="(max-width: 768px) 100vw, 256px" className="w-full h-full object-contain p-2" />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/65 px-3 py-2 text-xs text-white flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span>Reference image</span>
+                            <span className="inline-flex items-center gap-1">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Open
+                            </span>
+                        </div>
+                    </a>
                 )}
                 <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 self-start">
                     {[
@@ -182,6 +207,52 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
                     ))}
                 </div>
             </div>
+
+            {model.PurchaseDate && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                            <CalendarDays className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Purchase Date</div>
+                            <div className="text-sm font-semibold text-gray-900">
+                                {new Date(model.PurchaseDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {referencePhotos.length > 1 && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-sm font-bold text-gray-800">Reference Gallery</h2>
+                        <span className="text-xs text-gray-400">{referencePhotos.length} images saved</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {referencePhotos.map((photo: any, index: number) => {
+                            const isActive = photo.URL === activeImageUrl;
+                            return (
+                                <button
+                                    key={photo.PhotoID || `${photo.URL}-${index}`}
+                                    type="button"
+                                    onClick={() => setSelectedImageUrl(photo.URL)}
+                                    className={`relative h-20 w-20 overflow-hidden rounded-lg border-2 transition-colors ${isActive ? "border-blue-500" : "border-gray-200 hover:border-blue-300"}`}
+                                    title={`Show reference image ${index + 1}`}
+                                >
+                                    <Image src={photo.URL} alt={`Reference ${index + 1}`} fill unoptimized sizes="80px" className="object-cover" />
+                                    {index === 0 && (
+                                        <span className="absolute left-1 top-1 rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                            Primary
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Chart */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">

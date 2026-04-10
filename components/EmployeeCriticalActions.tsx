@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useModalDismiss } from '@/hooks/useModalDismiss'
 
 
 export default function EmployeeCriticalActions({ employee }: { employee: any }) {
@@ -9,6 +10,10 @@ export default function EmployeeCriticalActions({ employee }: { employee: any })
     const [loading, setLoading] = useState(false)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [deleteConfirmation, setDeleteConfirmation] = useState('')
+    const modalRef = useModalDismiss<HTMLDivElement>(() => {
+        setShowDeleteModal(false)
+        setDeleteConfirmation('')
+    }, showDeleteModal)
 
     async function handleDelete() {
         setLoading(true)
@@ -58,7 +63,7 @@ export default function EmployeeCriticalActions({ employee }: { employee: any })
             {/* Heavy Confirmation Modal */}
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-gray-900/75 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-red-100">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-red-100">
                         <div className="p-6">
                             <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                                 <span className="text-red-600">⚠️</span>

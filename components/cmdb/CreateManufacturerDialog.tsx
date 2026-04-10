@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Factory, Globe, X } from "lucide-react";
 import { createManufacturer } from "@/app/actions/manufacturer";
+import { useModalDismiss } from "@/hooks/useModalDismiss";
 
 export default function CreateManufacturerDialog() {
     const [open, setOpen] = useState(false);
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const modalRef = useModalDismiss<HTMLDivElement>(() => setOpen(false), open);
 
     async function handleSubmit(formData: FormData) {
         setIsSubmitting(true);
@@ -42,7 +44,7 @@ export default function CreateManufacturerDialog() {
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[520px] overflow-hidden border border-gray-100 transform transition-all scale-100">
+                    <div ref={modalRef} className="bg-white rounded-xl shadow-2xl w-full max-w-[520px] overflow-hidden border border-gray-100 transform transition-all scale-100">
 
                         {/* Modal Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
