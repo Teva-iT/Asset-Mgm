@@ -39,18 +39,45 @@ export default function AssignAssetWizardPage() {
 
     // Check for pre-selected model stock
     useEffect(() => {
+        const assetId = searchParams.get('assetId')
         const modelId = searchParams.get('modelId')
-        if (modelId && !selectedAsset) {
-            // Fetch available assets for this model
-            fetch(`/api/assets?modelId=${modelId}&status=Available`)
+        const locationId = searchParams.get('locationId')
+
+        if (assetId && !selectedAsset) {
+            fetch(`/api/assets?assetId=${assetId}&lite=1`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data && data.length > 0) {
-                        // Pre-select the first available one
+                    if (Array.isArray(data) && data.length > 0) {
                         setSelectedAsset(data[0])
-                    } else if (data && data.length === 0) {
-                        setError('No available units found for this model.')
+                    } else if (data && data.AssetID) {
+                        setSelectedAsset(data)
+                    } else {
+                        setError('Selected asset could not be loaded.')
                     }
+                })
+                .catch(err => console.error('Failed to pre-select asset', err))
+            return
+        }
+
+        if (modelId && !selectedAsset) {
+            // Ask the server to return an existing available asset if possible,
+            // otherwise allocate a new one atomically.
+            fetch('/api/assets/allocate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modelId,
+                    locationId: locationId || null,
+                    reuseExisting: true
+                })
+            })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (ok) {
+                        setSelectedAsset(data)
+                        return
+                    }
+                    setError(data?.error || 'No available units found for this model.')
                 })
                 .catch(err => console.error('Failed to pre-select asset', err))
         }
@@ -134,7 +161,7 @@ export default function AssignAssetWizardPage() {
                     {/* Step 2: Select Asset */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">2. Select Available Asset</label>
-                        <AssetAutocomplete onSelect={setSelectedAsset} />
+                        <AssetAutocomplete onSelect={setSelectedAsset} value={selectedAsset} />
                         {selectedAsset && (
                             <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
                                 Selected: {selectedAsset.AssetName} (SN: {selectedAsset.SerialNumber})

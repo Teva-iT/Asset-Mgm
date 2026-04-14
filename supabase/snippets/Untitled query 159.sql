@@ -1,0 +1,22 @@
+INSERT INTO department (departmentid, name, createdat, updatedat)
+VALUES
+(gen_random_uuid(), 'Human Resources', NOW(), NOW()),
+(gen_random_uuid(), 'Finance', NOW(), NOW()),
+(gen_random_uuid(), 'Marketing', NOW(), NOW()),
+(gen_random_uuid(), 'Sales', NOW(), NOW()),
+(gen_random_uuid(), 'Customer Support', NOW(), NOW()),
+(gen_random_uuid(), 'IT', NOW(), NOW()),
+(gen_random_uuid(), 'Engineering', NOW(), NOW()),
+(gen_random_uuid(), 'Product Management', NOW(), NOW()),
+(gen_random_uuid(), 'Operations', NOW(), NOW()),
+(gen_random_uuid(), 'Legal', NOW(), NOW()),
+(gen_random_uuid(), 'Procurement', NOW(), NOW()),
+(gen_random_uuid(), 'Logistics', NOW(), NOW()),
+(gen_random_uuid(), 'Quality Assurance', NOW(), NOW()),
+(gen_random_uuid(), 'Research and Development', NOW(), NOW()),
+(gen_random_uuid(), 'Business Intelligence', NOW(), NOW()),
+(gen_random_uuid(), 'Data Engineering', NOW(), NOW()),
+(gen_random_uuid(), 'Security', NOW(), NOW()),
+(gen_random_uuid(), 'Administration', NOW(), NOW()),
+(gen_random_uuid(), 'Public Relations', NOW(), NOW()),
+(gen_random_uuid(), 'Training and Development', NOW(), NOW());

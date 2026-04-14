@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ChevronRight, Check } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronRight, Check, Search } from 'lucide-react'
 
 interface StorageLocation {
     LocationID: string
@@ -20,6 +20,10 @@ interface StorageLocationSelectProps {
 export default function StorageLocationSelect({ value, onChange, error }: StorageLocationSelectProps) {
     const [locations, setLocations] = useState<StorageLocation[]>([])
     const [loading, setLoading] = useState(true)
+    const [isOpen, setIsOpen] = useState(false)
+    const [query, setQuery] = useState('')
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const searchInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const fetchLocations = async () => {
@@ -52,24 +56,99 @@ export default function StorageLocationSelect({ value, onChange, error }: Storag
         .map(l => ({ ...l, fullPath: getFullPath(l) }))
         .sort((a, b) => a.fullPath.localeCompare(b.fullPath))
 
+    const filteredLocations = sortedLocations.filter((loc) =>
+        loc.fullPath.toLowerCase().includes(query.trim().toLowerCase())
+    )
+
+    function closeDropdown() {
+        setIsOpen(false)
+        setQuery('')
+    }
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                closeDropdown()
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const timeoutId = window.setTimeout(() => searchInputRef.current?.focus(), 0)
+        return () => window.clearTimeout(timeoutId)
+    }, [isOpen])
+
+    function handleSelect(locationId: string) {
+        onChange(locationId)
+        closeDropdown()
+    }
+
     return (
-        <div className="relative">
-            <select
-                value={value || ''}
-                onChange={(e) => onChange(e.target.value)}
-                className={`w-full p-2 border rounded-md appearance-none bg-white ${error ? 'border-red-500' : 'border-gray-300'}`}
+        <div className="relative" ref={wrapperRef}>
+            <button
+                type="button"
+                onClick={() => {
+                    if (isOpen) {
+                        closeDropdown()
+                    } else {
+                        setQuery('')
+                        setIsOpen(true)
+                    }
+                }}
+                className={`filter-control cursor-pointer justify-between w-full bg-white ${error ? 'border-red-500' : 'border-gray-300'}`}
                 disabled={loading}
             >
-                <option value="">Select Storage Location...</option>
-                {sortedLocations.map(loc => (
-                    <option key={loc.LocationID} value={loc.LocationID}>
-                        {loc.fullPath}
-                    </option>
-                ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-            </div>
+                <span className={`truncate ${value ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {value ? sortedLocations.find(loc => loc.LocationID === value)?.fullPath || 'Select Storage Location...' : 'Select Storage Location...'}
+                </span>
+                <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+            </button>
+            {isOpen && (
+                <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl">
+                    <div className="border-b border-gray-100 p-2">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder="Search storage locations..."
+                                className="h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto">
+                        <button
+                            type="button"
+                            onClick={() => handleSelect('')}
+                            className={`flex w-full items-center px-3 py-2 text-left text-sm transition-colors ${!value ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                        >
+                            Select Storage Location...
+                        </button>
+                        {filteredLocations.length > 0 ? (
+                            filteredLocations.map(loc => (
+                                <button
+                                    key={loc.LocationID}
+                                    type="button"
+                                    onClick={() => handleSelect(loc.LocationID)}
+                                    className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors ${value === loc.LocationID ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                                >
+                                    <span className="truncate">{loc.fullPath}</span>
+                                    {value === loc.LocationID && <Check className="h-4 w-4 shrink-0" />}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="px-3 py-3 text-sm text-gray-400">No storage locations found</div>
+                        )}
+                    </div>
+                </div>
+            )}
             {loading && <div className="absolute right-8 top-3 text-xs text-gray-400">Loading...</div>}
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </div>

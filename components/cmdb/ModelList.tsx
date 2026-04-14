@@ -14,6 +14,7 @@ import AddStockDialog from "./AddStockDialog";
 import AdjustInventoryDialog from "./AdjustInventoryDialog";
 import StockHistoryDialog from "./StockHistoryDialog";
 import { useModalDismiss } from "@/hooks/useModalDismiss";
+import InventoryOrderCalendar from "@/components/inventory/InventoryOrderCalendar";
 
 const TABLE_ACTION_BUTTON_BASE =
     "inline-flex h-8 min-w-[110px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-4 text-sm font-medium shadow-sm transition-colors";
@@ -244,6 +245,64 @@ function formatWarehouseBreakdown(locationStocks: Map<string, number>) {
         .join(" | ");
 }
 
+function formatWarehouseRows(locationStocks: Map<string, number>, limit: number = 2) {
+    return Array.from(locationStocks.entries())
+        .sort((left, right) => left[0].localeCompare(right[0]))
+        .map(([location, quantity]) => ({ location, quantity }))
+        .slice(0, limit);
+}
+
+function formatWarehouseEntries(locationStocks: Map<string, number>) {
+    return Array.from(locationStocks.entries())
+        .sort((left, right) => {
+            const quantityDiff = (right[1] || 0) - (left[1] || 0);
+            if (quantityDiff !== 0) return quantityDiff;
+            return left[0].localeCompare(right[0]);
+        })
+        .map(([location, quantity]) => ({ location, quantity }));
+}
+
+function getOverviewColorBadgeClasses(color: string, active: boolean) {
+    const normalized = color.toLowerCase();
+
+    if (normalized === "black") {
+        return active
+            ? "border-gray-900 bg-gray-900 text-white shadow-sm"
+            : "border-gray-300 bg-white text-gray-700 hover:border-gray-500";
+    }
+
+    if (normalized === "yellow") {
+        return active
+            ? "border-yellow-400 bg-yellow-100 text-yellow-900 shadow-sm"
+            : "border-yellow-200 bg-white text-yellow-800 hover:border-yellow-300";
+    }
+
+    if (normalized === "magenta") {
+        return active
+            ? "border-fuchsia-400 bg-fuchsia-50 text-fuchsia-700 shadow-sm"
+            : "border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300";
+    }
+
+    if (normalized === "cyan") {
+        return active
+            ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm"
+            : "border-cyan-200 bg-white text-cyan-700 hover:border-cyan-300";
+    }
+
+    return active
+        ? "border-blue-400 bg-blue-50 text-blue-700 shadow-sm"
+        : "border-gray-200 bg-white text-gray-700 hover:border-blue-300";
+}
+
+function getOverviewColorDotClass(color: string) {
+    const normalized = color.toLowerCase();
+    if (normalized === "black") return "bg-gray-900";
+    if (normalized === "yellow") return "bg-yellow-400";
+    if (normalized === "magenta") return "bg-fuchsia-500";
+    if (normalized === "cyan") return "bg-cyan-400";
+    return "bg-blue-400";
+}
+
 function getColumnWidth(rows: Record<string, unknown>[], header: string) {
     const longestValue = Math.max(
         header.length,
@@ -382,9 +441,16 @@ function styleSummaryValueCell(cell: any, riskLevel: string) {
     cell.alignment = { vertical: "middle", horizontal: "center" };
 }
 
+function normalizeFilterValue(value: string | null | undefined) {
+    return String(value ?? "").trim().toLowerCase();
+}
+
 function matchesSelectedValues(selectedValues: string[], candidate: string | null | undefined) {
     if (selectedValues.length === 0) return true;
-    return candidate ? selectedValues.includes(candidate) : false;
+    const normalizedCandidate = normalizeFilterValue(candidate);
+    if (!normalizedCandidate) return false;
+    const normalizedSet = new Set(selectedValues.map((value) => normalizeFilterValue(value)));
+    return normalizedSet.has(normalizedCandidate);
 }
 
 function summarizeSelections(selectedValues: string[], options: { value: string; label: string }[], fallbackLabel: string) {
@@ -432,7 +498,13 @@ function MultiSelectFilter({
     allLabel: string;
 }) {
     const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+    const filteredOptions = options.filter((option) =>
+        option.label.toLowerCase().includes(query.trim().toLowerCase())
+    );
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -446,6 +518,13 @@ function MultiSelectFilter({
         }
 
         return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const timeoutId = window.setTimeout(() => searchInputRef.current?.focus(), 0);
+        return () => window.clearTimeout(timeoutId);
     }, [open]);
 
     function toggleValue(value: string) {
@@ -464,7 +543,16 @@ function MultiSelectFilter({
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
             <button
                 type="button"
-                onClick={() => setOpen((current) => !current)}
+                onClick={() => {
+                    if (open) {
+                        setOpen(false);
+                        setQuery("");
+                        return;
+                    }
+
+                    setQuery("");
+                    setOpen(true);
+                }}
                 className={`w-full border rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-between gap-3 ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}
             >
                 <span className={`truncate text-left ${selectedValues.length > 0 ? "text-gray-900" : "text-gray-500"}`}>
@@ -498,8 +586,21 @@ function MultiSelectFilter({
                             Clear
                         </button>
                     </div>
+                    <div className="border-b border-gray-100 p-2">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder={`Search ${label.toLowerCase()}...`}
+                                className="h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
+                    </div>
                     <div className="max-h-64 overflow-y-auto py-1">
-                        {options.map((option) => {
+                        {filteredOptions.map((option) => {
                             const checked = selectedValues.includes(option.value);
 
                             return (
@@ -518,6 +619,9 @@ function MultiSelectFilter({
                                 </label>
                             );
                         })}
+                        {filteredOptions.length === 0 && (
+                            <div className="px-3 py-3 text-sm text-gray-400">No {label.toLowerCase()} found</div>
+                        )}
                     </div>
                 </div>
             )}
@@ -544,6 +648,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     const [filterColors, setFilterColors] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
     const [assetTypes, setAssetTypes] = useState<{ Name: string }[]>([]);
+    const [selectedOverviewColor, setSelectedOverviewColor] = useState<string | null>("__all__");
 
     // --- Actions Dropdown State ---
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -677,7 +782,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         if (!matchesSelectedValues(filterManufacturers, m.Manufacturer?.Name)) return false;
 
         // Location Filter
-        if (filterLocations.length > 0 && !filterLocations.includes(m.DefaultLocationName || "")) return false;
+        if (!matchesSelectedValues(filterLocations, m.DefaultLocationName)) return false;
 
         // Status Filter
         if (filterStatuses.length > 0) {
@@ -708,6 +813,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     ).size;
 
     const activeFilterCount = filterCategories.length + filterManufacturers.length + filterLocations.length + filterStatuses.length + filterColors.length;
+    const shouldShowWarehouseOverview = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
     const consolidatedModels = Array.from(
         filteredModels.reduce((groups, model) => {
@@ -734,6 +840,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
             }
 
             groups.set(consolidationKey, {
+                modelId: model.ModelID,
                 modelName: model.Name || "",
                 modelNumber: model.ModelNumber || "",
                 series: new Set(model.Series ? [model.Series] : []),
@@ -752,6 +859,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
 
             return groups;
         }, new Map<string, {
+            modelId: string;
             modelName: string;
             modelNumber: string;
             series: Set<string>;
@@ -854,6 +962,130 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
 
         return Number(right["Shortage To Target"] || 0) - Number(left["Shortage To Target"] || 0);
     });
+    const warehouseOverviewGroups = Array.from(
+        consolidatedModels.reduce((groups, group) => {
+            const summaryKey = buildModelSummaryKey(group);
+            const existing = groups.get(summaryKey);
+
+            if (existing) {
+                existing.availableStock += group.availableStock;
+                existing.assignedStock += group.assignedStock;
+                existing.activeDevices += group.activeDevices;
+                existing.reorderLevel = Math.max(existing.reorderLevel, group.reorderLevel);
+                existing.sourceModels += group.sourceModels;
+                if (group.modelId && !existing.modelId) existing.modelId = group.modelId;
+                Array.from(group.series).forEach((series) => existing.series.add(series));
+                Array.from(group.conditions).forEach((condition) => existing.conditions.add(condition));
+                if (group.color) existing.colors.add(group.color);
+                if (group.color) {
+                    const colorSummary = existing.colorSummaries.get(group.color) || {
+                        availableStock: 0,
+                        assignedStock: 0,
+                        locationStocks: new Map<string, number>(),
+                    };
+                    colorSummary.availableStock += group.availableStock;
+                    colorSummary.assignedStock += group.assignedStock;
+                    group.locationStocks.forEach((quantity, location) => {
+                        colorSummary.locationStocks.set(location, (colorSummary.locationStocks.get(location) || 0) + quantity);
+                    });
+                    existing.colorSummaries.set(group.color, colorSummary);
+                }
+                group.locationStocks.forEach((quantity, location) => {
+                    existing.locationStocks.set(location, (existing.locationStocks.get(location) || 0) + quantity);
+                });
+                return groups;
+            }
+
+            groups.set(summaryKey, {
+                modelId: group.modelId,
+                modelName: group.modelName,
+                modelNumber: group.modelNumber,
+                manufacturer: group.manufacturer,
+                category: group.category,
+                availableStock: group.availableStock,
+                assignedStock: group.assignedStock,
+                reorderLevel: group.reorderLevel,
+                activeDevices: group.activeDevices,
+                sourceModels: group.sourceModels,
+                series: new Set(group.series),
+                conditions: new Set(group.conditions),
+                colors: new Set(group.color ? [group.color] : []),
+                colorSummaries: new Map(group.color ? [[group.color, {
+                    availableStock: group.availableStock,
+                    assignedStock: group.assignedStock,
+                    locationStocks: new Map(group.locationStocks),
+                }]] : []),
+                locationStocks: new Map(group.locationStocks),
+            });
+
+            return groups;
+        }, new Map<string, {
+            modelId: string;
+            modelName: string;
+            modelNumber: string;
+            manufacturer: string;
+            category: string;
+            availableStock: number;
+            assignedStock: number;
+            reorderLevel: number;
+            activeDevices: number;
+            sourceModels: number;
+            series: Set<string>;
+            conditions: Set<string>;
+            colors: Set<string>;
+            colorSummaries: Map<string, {
+                availableStock: number;
+                assignedStock: number;
+                locationStocks: Map<string, number>;
+            }>;
+            locationStocks: Map<string, number>;
+        }>())
+    ).map(([, group]) => group);
+
+    const singleWarehouseOverviewGroup = warehouseOverviewGroups.length === 1 ? warehouseOverviewGroups[0] : null;
+    const warehouseOverviewModels = warehouseOverviewGroups.slice(0, 6);
+    const activeSingleOverviewColor = singleWarehouseOverviewGroup
+        ? (selectedOverviewColor === "__all__"
+            ? "__all__"
+            : (selectedOverviewColor && singleWarehouseOverviewGroup.colorSummaries.has(selectedOverviewColor)
+                ? selectedOverviewColor
+                : "__all__"))
+        : null;
+    const activeSingleOverviewColorSummary = singleWarehouseOverviewGroup
+        ? (activeSingleOverviewColor === "__all__"
+            ? {
+                availableStock: singleWarehouseOverviewGroup.availableStock,
+                assignedStock: singleWarehouseOverviewGroup.assignedStock,
+                locationStocks: singleWarehouseOverviewGroup.locationStocks,
+            }
+            : (activeSingleOverviewColor
+                ? singleWarehouseOverviewGroup.colorSummaries.get(activeSingleOverviewColor) || null
+                : null))
+        : null;
+    const activeSingleOverviewWarehouseEntries = formatWarehouseEntries(
+        activeSingleOverviewColorSummary?.locationStocks || singleWarehouseOverviewGroup?.locationStocks || new Map<string, number>()
+    );
+
+    useEffect(() => {
+        if (!singleWarehouseOverviewGroup) {
+            setSelectedOverviewColor(null);
+            return;
+        }
+
+        const availableColors = Array.from(singleWarehouseOverviewGroup.colorSummaries.keys());
+        if (availableColors.length === 0) {
+            setSelectedOverviewColor(null);
+            return;
+        }
+
+        if (selectedOverviewColor === "__all__") {
+            return;
+        }
+
+        if (!selectedOverviewColor || !singleWarehouseOverviewGroup.colorSummaries.has(selectedOverviewColor)) {
+            setSelectedOverviewColor("__all__");
+        }
+    }, [singleWarehouseOverviewGroup, selectedOverviewColor]);
 
     function buildExportFileName(extension: "csv" | "xlsx", variant?: string) {
         const parts = ["asset-models"];
@@ -1270,6 +1502,10 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                 {/* Advanced Filters Panel */}
                 {showFilters && (
                     <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="w-full">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Inventory Intake</div>
+                            <InventoryOrderCalendar />
+                        </div>
                         {/* Status Filter */}
                         <MultiSelectFilter
                             label="Stock Status"
@@ -1332,6 +1568,195 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                     </div>
                 )}
             </div>
+
+            {shouldShowWarehouseOverview && warehouseOverviewGroups.length > 0 && (
+                <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/60 p-4 sm:p-5 shadow-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                                <h3 className="text-sm font-semibold text-gray-900">
+                                    {singleWarehouseOverviewGroup ? "Warehouse overview for selected item" : "Warehouse overview for filtered items"}
+                                </h3>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                                {singleWarehouseOverviewGroup
+                                    ? "A single, combined view of this item across all warehouses, even if it appears in multiple colors or rows."
+                                    : "Exact available stock by warehouse for the item or items that match your current search and filters."}
+                            </p>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            {singleWarehouseOverviewGroup ? (
+                                <>
+                                    1 combined item view
+                                </>
+                            ) : (
+                                <>
+                                    Showing top <span className="font-semibold text-gray-900">{warehouseOverviewModels.length}</span>
+                                    {" "}of <span className="font-semibold text-gray-900">{warehouseOverviewGroups.length}</span> item{warehouseOverviewGroups.length === 1 ? "" : "s"}
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {singleWarehouseOverviewGroup ? (
+                        <div className="mt-4 rounded-2xl border border-blue-300 bg-white p-5 shadow-md ring-1 ring-blue-100 md:sticky md:top-4 md:z-10">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="min-w-0">
+                                    <Link
+                                        href={`/inventory/cmdb/models/${singleWarehouseOverviewGroup.modelId}`}
+                                        className="block truncate text-lg font-semibold text-blue-700 hover:text-blue-800"
+                                        title={singleWarehouseOverviewGroup.modelName}
+                                    >
+                                        {singleWarehouseOverviewGroup.modelName}
+                                    </Link>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        {Array.from(singleWarehouseOverviewGroup.series).sort().join(" | ") || "No series"}
+                                    </p>
+                                    <div className="mt-2 inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                        Focused item snapshot
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                            {singleWarehouseOverviewGroup.category || "Uncategorized"}
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                                            {singleWarehouseOverviewGroup.manufacturer || "Unknown manufacturer"}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedOverviewColor("__all__")}
+                                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                                activeSingleOverviewColor === "__all__"
+                                                    ? "border-blue-400 bg-blue-600 text-white shadow-sm"
+                                                    : "border-blue-200 bg-white text-blue-700 hover:border-blue-300"
+                                            }`}
+                                            title="Show total stock across all colors and all warehouses"
+                                        >
+                                            <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400" />
+                                            <span>All Colors</span>
+                                        </button>
+                                        {Array.from(singleWarehouseOverviewGroup.colors).sort().map((color) => {
+                                            const active = color === activeSingleOverviewColor;
+                                            return (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    onClick={() => setSelectedOverviewColor(color)}
+                                                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${getOverviewColorBadgeClasses(color, active)}`}
+                                                    title={`Show ${color} stock across all warehouses`}
+                                                >
+                                                    <span className={`h-2.5 w-2.5 rounded-full border border-black/10 ${getOverviewColorDotClass(color)}`} />
+                                                    <span>{color}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
+                                    <div className="rounded-xl bg-blue-50 px-4 py-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">Available</div>
+                                        <div className="mt-1 text-2xl font-bold text-blue-900">{activeSingleOverviewColorSummary?.availableStock ?? singleWarehouseOverviewGroup.availableStock}</div>
+                                    </div>
+                                    <div className="rounded-xl bg-emerald-50 px-4 py-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600">Warehouses</div>
+                                        <div className="mt-1 text-2xl font-bold text-emerald-900">{activeSingleOverviewWarehouseEntries.length}</div>
+                                    </div>
+                                    <div className="rounded-xl bg-amber-50 px-4 py-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-600">Assigned</div>
+                                        <div className="mt-1 text-2xl font-bold text-amber-900">{activeSingleOverviewColorSummary?.assignedStock ?? singleWarehouseOverviewGroup.assignedStock}</div>
+                                    </div>
+                                    <div className="rounded-xl bg-violet-50 px-4 py-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wider text-violet-600">Active color</div>
+                                        <div className="mt-1 text-base font-bold text-violet-900">
+                                            {activeSingleOverviewColor === "__all__" ? "All Colors" : (activeSingleOverviewColor || "None")}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                {activeSingleOverviewWarehouseEntries.map((entry) => (
+                                    <div
+                                        key={`${singleWarehouseOverviewGroup.modelId}-${activeSingleOverviewColor || "all"}-${entry.location}`}
+                                        className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <MapPin className="h-4 w-4 text-blue-500" />
+                                                <span className="truncate text-sm font-semibold text-gray-900">{entry.location}</span>
+                                            </div>
+                                            <span className="text-xl font-bold text-gray-900">{entry.quantity}</span>
+                                        </div>
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {activeSingleOverviewColor === "__all__"
+                                                ? "Available total stock in this warehouse"
+                                                : activeSingleOverviewColor
+                                                    ? `Available ${activeSingleOverviewColor} stock in this warehouse`
+                                                    : "Available now in this warehouse"}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {warehouseOverviewModels.map((group) => {
+                                const warehouseEntries = formatWarehouseEntries(group.locationStocks);
+
+                                return (
+                                    <div key={`${group.modelId}-${group.modelName}-${group.category}-${group.manufacturer}`} className="rounded-xl border border-blue-100 bg-white/90 p-4 shadow-sm">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <Link
+                                                    href={`/inventory/cmdb/models/${group.modelId}`}
+                                                    className="block truncate text-sm font-semibold text-blue-700 hover:text-blue-800"
+                                                    title={group.modelName}
+                                                >
+                                                    {group.modelName}
+                                                </Link>
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    {Array.from(group.series).sort().join(" | ") || "No series"}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-700">
+                                                    {warehouseEntries.length} warehouse{warehouseEntries.length === 1 ? "" : "s"}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {group.availableStock} available
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {warehouseEntries.map((entry) => (
+                                                <span
+                                                    key={`${group.modelName}-${entry.location}`}
+                                                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700"
+                                                    title={`${entry.location}: ${entry.quantity}`}
+                                                >
+                                                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                                    <span className="font-medium">{entry.location}</span>
+                                                    <span className="text-gray-500">•</span>
+                                                    <span className="font-semibold text-gray-900">{entry.quantity}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
+                                            <span>Assigned: <span className="font-semibold text-gray-900">{group.assignedStock}</span></span>
+                                            <span>Active devices: <span className="font-semibold text-gray-900">{group.activeDevices}</span></span>
+                                            <span>Rows merged: <span className="font-semibold text-gray-900">{group.sourceModels}</span></span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="rounded-md border">
                 <table className="w-full text-sm text-left">
@@ -1453,11 +1878,34 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                         )}
                                     </td>
                                     <td className="p-4">
-                                        <div className="flex items-center gap-1.5">
-                                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                                            <span className={`text-sm ${m.DefaultLocationName ? 'text-gray-900 font-medium' : 'text-gray-400 italic'}`}>
-                                                {m.DefaultLocationName || "Not Set"}
-                                            </span>
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex items-center gap-1.5">
+                                                <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                                <span className={`text-sm ${m.DefaultLocationName ? 'text-gray-900 font-medium' : 'text-gray-400 italic'}`}>
+                                                    {m.DefaultLocationName || "Not Set"}
+                                                </span>
+                                            </div>
+                                            {m.locationStocks?.size > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {formatWarehouseRows(m.locationStocks, 2).map((row) => (
+                                                        <span
+                                                            key={row.location}
+                                                            className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                                                            title={`${row.location}: ${row.quantity}`}
+                                                        >
+                                                            <span className="max-w-[120px] truncate">{row.location}</span>
+                                                            <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                                                {row.quantity}
+                                                            </span>
+                                                        </span>
+                                                    ))}
+                                                    {m.locationStocks.size > 2 && (
+                                                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                                            +{m.locationStocks.size - 2} more
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="p-4 text-center">
@@ -1537,7 +1985,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                                         )}
                                         {/* Primary Action Button */}
                                         <Link
-                                            href={`/assign?modelId=${m.ModelID}`}
+                                            href={`/assign?modelId=${m.ModelID}${m.DefaultLocationID ? `&locationId=${m.DefaultLocationID}` : ''}`}
                                             className={`${(m.AvailableStock || 0) <= 0
                                                 ? TABLE_ACTION_BUTTON_PRIMARY_DISABLED
                                                 : TABLE_ACTION_BUTTON_PRIMARY

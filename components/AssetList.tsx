@@ -116,18 +116,36 @@ function MultiSelectFilter({
     renderOption?: (option: string) => React.ReactNode
 }) {
     const [isOpen, setIsOpen] = useState(false)
+    const [query, setQuery] = useState('')
     const wrapperRef = useRef<HTMLDivElement | null>(null)
+    const searchInputRef = useRef<HTMLInputElement | null>(null)
+
+    const filteredOptions = options.filter((option) =>
+        option.toLowerCase().includes(query.trim().toLowerCase())
+    )
+
+    function closeDropdown() {
+        setIsOpen(false)
+        setQuery('')
+    }
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setIsOpen(false)
+                closeDropdown()
             }
         }
 
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const timeoutId = window.setTimeout(() => searchInputRef.current?.focus(), 0)
+        return () => window.clearTimeout(timeoutId)
+    }, [isOpen])
 
     function toggleOption(option: string) {
         if (selectedValues.includes(option)) {
@@ -142,7 +160,14 @@ function MultiSelectFilter({
         <div className={`relative ${className}`} ref={wrapperRef}>
             <button
                 type="button"
-                onClick={() => setIsOpen((current) => !current)}
+                onClick={() => {
+                    if (isOpen) {
+                        closeDropdown()
+                    } else {
+                        setQuery('')
+                        setIsOpen(true)
+                    }
+                }}
                 className="filter-control cursor-pointer justify-between w-full"
             >
                 <span className={`truncate text-sm ${selectedValues.length > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
@@ -168,7 +193,20 @@ function MultiSelectFilter({
                             Clear
                         </button>
                     </div>
-                    {options.map((option) => (
+                    <div className="border-b border-gray-100 p-2">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder={`Search ${label.toLowerCase()}...`}
+                                className="h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
+                    </div>
+                    {filteredOptions.map((option) => (
                         <label
                             key={option}
                             className="flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 text-gray-700"
@@ -184,6 +222,9 @@ function MultiSelectFilter({
                             </span>
                         </label>
                     ))}
+                    {filteredOptions.length === 0 && (
+                        <div className="px-3 py-3 text-sm text-gray-400">No {label.toLowerCase()} found</div>
+                    )}
                 </div>
             )}
         </div>
@@ -425,7 +466,7 @@ export default function AssetList({ initialAssets }: { initialAssets: Asset[] })
                             </Link>
                             {asset.Status === 'Available' && (
                                 <Link
-                                    href={`/assets/${asset.AssetID}/assign`}
+                                    href={`/assign?assetId=${asset.AssetID}`}
                                     className="flex-1 btn btn-primary text-center py-2 text-sm"
                                 >
                                     Assign
@@ -520,7 +561,7 @@ export default function AssetList({ initialAssets }: { initialAssets: Asset[] })
                                         </Link>
                                         {asset.Status === 'Available' && (
                                             <Link
-                                                href={`/assets/${asset.AssetID}/assign`}
+                                                href={`/assign?assetId=${asset.AssetID}`}
                                                 className="text-green-600 hover:text-green-900 hover:underline px-2 py-1 rounded font-medium"
                                             >
                                                 Assign

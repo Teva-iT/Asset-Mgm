@@ -14,7 +14,9 @@ export async function POST(request: Request) {
         // 2. Validate Asset
         const { data: asset, error: assetError } = await supabase.from("Asset").select("*").eq("AssetID", AssetID).single();
         if (assetError || !asset) throw new Error('Asset not found')
-        if (asset.Status !== 'Available') throw new Error('Asset is not available for assignment')
+        if (asset.Status !== 'Available' && asset.Status !== 'In Stock') {
+            throw new Error('Asset is not available for assignment')
+        }
 
         // 3. Validate Employee
         const { data: employee, error: empError } = await supabase.from("Employee").select("*").eq("EmployeeID", EmployeeID).single();
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
                     ModelID: asset.ModelID,
                     Quantity: -1,
                     ActionType: 'ASSIGN',
+                    StorageLocationID: asset.StorageLocationID || null,
                     Notes: `Assigned to employee ${EmployeeID} (Assignment: ${newAssignmentId})`,
                     CreatedAt: new Date().toISOString()
                 })
@@ -102,6 +105,7 @@ export async function POST(request: Request) {
                     ModelID: asset.ModelID,
                     Quantity: -1,
                     ActionType: 'ASSIGN',
+                    StorageLocationID: asset.StorageLocationID || null,
                     Notes: `Assigned to employee ${EmployeeID} (Assignment: ${newAssignmentId})`,
                     CreatedAt: new Date().toISOString()
                 })

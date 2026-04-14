@@ -9,10 +9,12 @@ export default function NavBar({ user }: { user?: any }) {
     const pathname = usePathname()
 
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [pendingHref, setPendingHref] = useState<string | null>(null)
 
     const [alertCount, setAlertCount] = useState(0)
 
     useEffect(() => {
+        setPendingHref(null)
         const fetchAlerts = async () => {
             try {
                 const res = await fetch('/api/inventory/alerts')
@@ -27,7 +29,7 @@ export default function NavBar({ user }: { user?: any }) {
         fetchAlerts()
         const interval = setInterval(fetchAlerts, 30000) // Poll every 30 seconds
         return () => clearInterval(interval)
-    }, [])
+    }, [pathname])
 
     const links = [
         { name: 'Home', href: '/' },
@@ -73,7 +75,10 @@ export default function NavBar({ user }: { user?: any }) {
             <div className="hidden lg:flex items-center gap-2 xl:gap-6">
                 {links.map(link => {
                     const hasSubItems = link.subItems && link.subItems.length > 0;
-                    const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)) || (hasSubItems && link.subItems!.some(sub => pathname.startsWith(sub.href)))
+                    const isActive = pathname === link.href
+                        || (link.href !== '/' && pathname.startsWith(link.href))
+                        || (hasSubItems && link.subItems!.some(sub => pathname.startsWith(sub.href)))
+                        || pendingHref === link.href
 
                     if (hasSubItems) {
                         return (
@@ -97,6 +102,7 @@ export default function NavBar({ user }: { user?: any }) {
                                                     <Link
                                                         key={sub.name}
                                                         href={sub.href}
+                                                        onClick={() => setPendingHref(sub.href)}
                                                         className={`block px-4 py-2 text-sm ${isSubActive ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                                                     >
                                                         {sub.name}
@@ -114,6 +120,7 @@ export default function NavBar({ user }: { user?: any }) {
                         <Link
                             key={link.name}
                             href={link.href}
+                            onClick={() => setPendingHref(link.href)}
                             className={`
                             text-sm font-semibold transition-colors duration-100 px-3 py-2 rounded-md whitespace-nowrap
                             ${isActive
@@ -174,7 +181,7 @@ export default function NavBar({ user }: { user?: any }) {
                                             <Link
                                                 key={sub.name}
                                                 href={sub.href}
-                                                onClick={() => setIsMenuOpen(false)}
+                                                onClick={() => { setPendingHref(sub.href); setIsMenuOpen(false) }}
                                                 className={`
                                                     text-base font-medium transition-colors duration-100 px-6 py-2 rounded-md block
                                                     ${isSubActive
@@ -194,7 +201,7 @@ export default function NavBar({ user }: { user?: any }) {
                             <Link
                                 key={link.name}
                                 href={link.href}
-                                onClick={() => setIsMenuOpen(false)}
+                                onClick={() => { setPendingHref(link.href); setIsMenuOpen(false) }}
                                 className={`
                                     text-base font-semibold transition-colors duration-100 px-4 py-3 rounded-md block
                                     ${isActive

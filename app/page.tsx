@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import RecentAuditLog from '@/components/dashboard/RecentAuditLog'
 import AssetTypeDistribution from '@/components/dashboard/AssetTypeDistribution'
 
@@ -6,44 +6,39 @@ export const revalidate = 30 // Cache for 30 seconds
 
 export default async function Dashboard() {
     const [
-        availableCount,
-        assignedCount,
+        statusCountsRes,
         overdueCount,
         recentLogs,
-        lostCount,
-        damagedCount,
         assetTypesData,
         lowStockCount
     ] = await Promise.all([
-        supabase.from("Asset").select("*", { count: "exact", head: true }).eq("Status", "Available").then(res => res.count || 0),
-        supabase.from("Asset").select("*", { count: "exact", head: true }).eq("Status", "Assigned").then(res => res.count || 0),
-        supabase.from("Assignment").select("*", { count: "exact", head: true })
+        supabaseAdmin.from("asset_status_counts").select("status, count"),
+        supabaseAdmin.from("Assignment").select("*", { count: "exact", head: true })
             .lt("ExpectedReturnDate", new Date().toISOString())
             .is("ActualReturnDate", null)
             .eq("Status", "Active")
             .then(res => res.count || 0),
-        supabase.from("AuditLog").select("*, User(Username), Asset(AssetName, AssetType, AssetID)")
+        supabaseAdmin.from("AuditLog").select("*, User(Username), Asset(AssetName, AssetType, AssetID)")
             .order("Timestamp", { ascending: false })
             .limit(5)
             .then(res => res.data || []),
-        supabase.from("Asset").select("*", { count: "exact", head: true }).eq("Status", "Lost").then(res => res.count || 0),
-        supabase.from("Asset").select("*", { count: "exact", head: true }).eq("Status", "Damaged").then(res => res.count || 0),
-        supabase.from("Asset").select("AssetType").then(res => {
-            const counts: any = {};
-            (res.data || []).forEach(a => {
-                const t = a.AssetType || 'Uncategorized';
-                counts[t] = (counts[t] || 0) + 1;
-            });
-            return Object.entries(counts)
-                .map(([type, count]) => ({ _count: { AssetType: count as number }, AssetType: type }))
-                .sort((a, b) => b._count.AssetType - a._count.AssetType)
-                .slice(0, 5);
-        }),
-        supabase.from("Asset").select("*", { count: "exact", head: true })
+        supabaseAdmin.from("asset_type_counts").select("asset_type, count").order("count", { ascending: false }).limit(5).then(res => res.data || []),
+        supabaseAdmin.from("Asset").select("*", { count: "exact", head: true })
             .eq("OwnershipType", "Stock")
             .lt("Quantity", 5)
             .then(res => res.count || 0)
     ])
+
+    const statusRows = statusCountsRes.data || []
+    const statusMap = statusRows.reduce((acc: Record<string, number>, row: any) => {
+        acc[String(row.status || '')] = Number(row.count || 0)
+        return acc
+    }, {})
+
+    const availableCount = statusMap['Available'] || statusMap['In Stock'] || 0
+    const assignedCount = statusMap['Assigned'] || 0
+    const lostCount = statusMap['Lost'] || 0
+    const damagedCount = statusMap['Damaged'] || 0
 
     const totalAssets = availableCount + assignedCount + lostCount + damagedCount
     const assignedHealthy = Math.max(0, assignedCount - overdueCount)
@@ -54,9 +49,9 @@ export default async function Dashboard() {
     const getPercent = (val: number) => totalAssets > 0 ? (val / totalAssets) * 100 : 0
 
     // Format Type Data
-    const formattedTypeData = assetTypesData.map(item => ({
-        type: item.AssetType || 'Uncategorized',
-        count: item._count.AssetType
+    const formattedTypeData = assetTypesData.map((item: any) => ({
+        type: item.asset_type || 'Uncategorized',
+        count: item.count || 0
     }))
 
     return (

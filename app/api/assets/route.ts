@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { jwtVerify } from 'jose'
 import { logAudit, AuditAction } from '@/lib/audit'
 
@@ -18,33 +18,57 @@ async function getUserInfo(request: NextRequest): Promise<{ id: string, role: st
 }
 
 export async function GET(request: NextRequest) {
+    const startedAt = Date.now()
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')
     const status = searchParams.get('status')
     const modelId = searchParams.get('modelId')
+    const locationId = searchParams.get('locationId')
+    const assetId = searchParams.get('assetId')
+    const lite = searchParams.get('lite') === '1'
 
     try {
-        let queryBuilder = supabase
+        let queryBuilder = supabaseAdmin
             .from("Asset")
-            .select(`
-                *,
-                AssetModel:ModelID (
-                    *,
-                    Manufacturer:ManufacturerID (*)
-                ),
-                assignments:Assignment (
-                    *,
-                    Employee:EmployeeID (*)
-                )
-            `)
+            .select(
+                lite
+                    ? "AssetID, AssetName, AssetType, SerialNumber, Status, ModelID, StorageLocationID"
+                    : `
+                        *,
+                        AssetModel:ModelID (
+                            *,
+                            Manufacturer:ManufacturerID (*)
+                        ),
+                        assignments:Assignment (
+                            *,
+                            Employee:EmployeeID (*)
+                        )
+                    `
+            )
             .order("createdAt", { ascending: false });
 
         if (status) {
-            queryBuilder = queryBuilder.eq("Status", status);
+            const rawStatuses = status.split(',').map(s => s.trim()).filter(Boolean)
+            const statusSet = new Set(rawStatuses)
+            if (statusSet.has('Available')) statusSet.add('In Stock')
+            const statusList = Array.from(statusSet)
+            if (statusList.length === 1) {
+                queryBuilder = queryBuilder.eq("Status", statusList[0])
+            } else {
+                queryBuilder = queryBuilder.in("Status", statusList)
+            }
         }
 
         if (modelId) {
             queryBuilder = queryBuilder.eq("ModelID", modelId);
+        }
+
+        if (assetId) {
+            queryBuilder = queryBuilder.eq("AssetID", assetId)
+        }
+
+        if (locationId) {
+            queryBuilder = queryBuilder.eq("StorageLocationID", locationId)
         }
 
         if (q) {
@@ -58,8 +82,15 @@ export async function GET(request: NextRequest) {
         const { data: assets, error } = await queryBuilder;
         if (error) throw error;
 
+        if (lite) {
+            const response = NextResponse.json(assets || [])
+            response.headers.set('x-api-duration-ms', String(Date.now() - startedAt))
+            response.headers.set('x-api-route', '/api/assets')
+            return response
+        }
+
         // Fetch storage locations separately (avoids PostgREST schema cache FK join issues)
-        const { data: locations } = await supabase
+        const { data: locations } = await supabaseAdmin
             .from("StorageLocation")
             .select("LocationID, Name, ParentLocationID");
 
@@ -88,10 +119,16 @@ export async function GET(request: NextRequest) {
             return asset;
         });
 
-        return NextResponse.json(processedAssets)
+        const response = NextResponse.json(processedAssets)
+        response.headers.set('x-api-duration-ms', String(Date.now() - startedAt))
+        response.headers.set('x-api-route', '/api/assets')
+        return response
     } catch (error) {
         console.error('Failed to fetch assets:', error)
-        return NextResponse.json({ error: 'Failed to fetch assets' }, { status: 500 })
+        const response = NextResponse.json({ error: 'Failed to fetch assets' }, { status: 500 })
+        response.headers.set('x-api-duration-ms', String(Date.now() - startedAt))
+        response.headers.set('x-api-route', '/api/assets')
+        return response
     }
 }
 

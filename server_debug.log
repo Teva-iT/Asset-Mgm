@@ -25,3 +25,20 @@
 [2026-02-21T14:18:40.161Z] Received POST request for employee creation: {"FirstName":"Kim ","LastName":"Lena Renner","Email":"kim.renner@tevapharma.ch","DepartmentHidden":"Legal","StartDate":"2026-01-19","Status":"Active","EndDate":null,"Department":"Legal"}
 [2026-02-21T14:18:40.181Z] Generated slug: kim-lenarenner
 [2026-02-21T14:18:40.206Z] Employee created successfully: 69a65f86-831d-4737-a607-063467d48282
+[2026-04-13T06:52:40.146Z] AD lookup warning for "Ayoub.Bousbaa@mepha.ch": Failed to query Active Directory.
+[2026-04-13T06:52:58.343Z] AD lookup warning for "Ayoub.Bousbaa@mepha.ch": Failed to query Active Directory.
+[2026-04-13T07:01:44.740Z] AD lookup warning for "Ayoub.Bousbaa@mepha.ch": Active Directory is not fully configured.
+[2026-04-13T07:05:33.788Z] AD lookup warning for "Ayoub.Bousbaa@mepha.ch": Failed to query Active Directory: getaddrinfo ENOTFOUND teva.corp
+[2026-04-13T07:58:21.975Z] AD lookup warning for "Ayoub.Bousbaa@mepha.ch": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:04:15.158Z] Received POST request for employee creation: {"FirstName":"Ayoub ","LastName":"Bousbaa","Email":"Ayoub.Bousbaa@mepha.ch","DepartmentHidden":"Sales","StartDate":"","Status":"Active","EndDate":null,"Department":"Sales"}
+[2026-04-13T10:04:15.174Z] Generated slug: ayoub-bousbaa
+[2026-04-13T10:04:15.211Z] Employee created successfully: 51d97608-26c2-421b-bac3-e9bc9d7786d6
+[2026-04-13T10:05:32.898Z] AD lookup warning for "شغ": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:05:34.469Z] AD lookup warning for " ay": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:05:36.063Z] AD lookup warning for " aya": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:34:39.141Z] AD lookup warning for "aya": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:34:52.249Z] AD lookup warning for "Ayoub": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:42:25.753Z] AD lookup warning for "َغش": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:42:26.071Z] AD lookup warning for "Ayoubn": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:42:26.110Z] AD lookup warning for "Ay": Failed to query Active Directory: Connection timeout
+[2026-04-13T10:42:26.160Z] AD lookup warning for "Ayoub": Failed to query Active Directory: Connection timeout

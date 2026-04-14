@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Package, TrendingUp, BarChart2, History, Plus, Minus, RefreshCw, ExternalLink, CalendarDays } from "lucide-react";
+import { ArrowLeft, Package, TrendingUp, BarChart2, History, Plus, Minus, RefreshCw, ExternalLink, CalendarDays, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const ACTION_META: Record<string, { color: string; label: string; icon: any }> = {
@@ -17,6 +17,55 @@ const ACTION_META: Record<string, { color: string; label: string; icon: any }> =
 };
 
 interface ChartPoint { date: string; stock: number }
+
+function sortLocationEntries(locationStocks: Record<string, number> | undefined) {
+    return Object.entries(locationStocks || {}).sort((left, right) => {
+        const quantityDiff = right[1] - left[1];
+        if (quantityDiff !== 0) return quantityDiff;
+        return left[0].localeCompare(right[0]);
+    });
+}
+
+function getColorBadgeClasses(color: string, active: boolean) {
+    const normalized = color.toLowerCase();
+
+    if (normalized === "black") {
+        return active
+            ? "border-gray-900 bg-gray-900 text-white shadow-sm"
+            : "border-gray-300 bg-white text-gray-700 hover:border-gray-500";
+    }
+
+    if (normalized === "yellow") {
+        return active
+            ? "border-yellow-400 bg-yellow-100 text-yellow-900 shadow-sm"
+            : "border-yellow-200 bg-white text-yellow-800 hover:border-yellow-300";
+    }
+
+    if (normalized === "magenta") {
+        return active
+            ? "border-fuchsia-400 bg-fuchsia-50 text-fuchsia-700 shadow-sm"
+            : "border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300";
+    }
+
+    if (normalized === "cyan") {
+        return active
+            ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm"
+            : "border-cyan-200 bg-white text-cyan-700 hover:border-cyan-300";
+    }
+
+    return active
+        ? "border-blue-400 bg-blue-50 text-blue-700 shadow-sm"
+        : "border-gray-200 bg-white text-gray-700 hover:border-blue-300";
+}
+
+function getColorDotClass(color: string) {
+    const normalized = color.toLowerCase();
+    if (normalized === "black") return "bg-gray-900";
+    if (normalized === "yellow") return "bg-yellow-400";
+    if (normalized === "magenta") return "bg-fuchsia-500";
+    if (normalized === "cyan") return "bg-cyan-400";
+    return "bg-blue-400";
+}
 
 function StockTrendChart({ points }: { points: ChartPoint[] }) {
     if (points.length < 2) {
@@ -92,6 +141,7 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
     const [data, setData] = useState<{ model: any; history: any[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+    const [selectedColorSummary, setSelectedColorSummary] = useState<string | null>(null);
 
     useEffect(() => {
         fetch(`/api/models/${modelId}`)
@@ -100,6 +150,7 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
                 setData(payload);
                 const firstPhoto = payload?.model?.ModelPhotos?.[0]?.URL || payload?.model?.ImageURL || null;
                 setSelectedImageUrl(firstPhoto);
+                setSelectedColorSummary(payload?.model?.Color || payload?.model?.ColorSummaries?.[0]?.color || null);
             })
             .catch(() => setData(null))
             .finally(() => setLoading(false));
@@ -128,6 +179,26 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
         : (model.ImageURL ? [{ URL: model.ImageURL, Category: "Reference" }] : []);
     const activeImageUrl = selectedImageUrl || referencePhotos[0]?.URL || null;
     const recentHistory = [...history].reverse().slice(0, 20);
+    const colorSummaries = Array.isArray(model.ColorSummaries) ? model.ColorSummaries : [];
+    const allColorsSummary = colorSummaries.length > 0 ? colorSummaries.reduce((summary: any, colorSummary: any) => {
+        summary.availableStock += colorSummary.availableStock || 0;
+        summary.assignedStock += colorSummary.assignedStock || 0;
+        summary.totalStock += colorSummary.totalStock || 0;
+        Object.entries(colorSummary.locationStocks || {}).forEach(([location, quantity]) => {
+            summary.locationStocks[location] = (summary.locationStocks[location] || 0) + Number(quantity || 0);
+        });
+        return summary;
+    }, {
+        color: "All Colors",
+        availableStock: 0,
+        assignedStock: 0,
+        totalStock: 0,
+        locationStocks: {} as Record<string, number>,
+    }) : null;
+    const activeColorSummary = selectedColorSummary === "__all__"
+        ? allColorsSummary
+        : colorSummaries.find((summary: any) => summary.color === selectedColorSummary) || colorSummaries[0] || allColorsSummary;
+    const activeColorLocations = sortLocationEntries(activeColorSummary?.locationStocks);
 
     const stockStatus = (() => {
         const a = model.AvailableStock || 0, r = model.ReorderLevel || 0;
@@ -149,7 +220,7 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
                     <h1 className="text-2xl font-bold text-gray-900">{model.Name}</h1>
                     <p className="text-sm text-gray-500 mt-0.5">
                         {model.Manufacturer?.Name} · {model.Category}
-                        {model.Color && (
+                        {model.Color && colorSummaries.length <= 1 && (
                             <>
                                 <span className="mx-2 text-gray-300">|</span>
                                 <span className="inline-flex items-center gap-1.5">
@@ -164,6 +235,96 @@ export default function ModelDetailContent({ modelId }: { modelId: string }) {
                     {stockStatus.dot} {stockStatus.label}
                 </span>
             </div>
+
+            {colorSummaries.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
+                            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">Color overview</div>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Click a color badge to see the combined stock of that color across all warehouses.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                    {model.Category}
+                                </span>
+                                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700">
+                                    {model.Manufacturer?.Name || "Unknown manufacturer"}
+                                </span>
+                                {colorSummaries.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedColorSummary("__all__")}
+                                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                            selectedColorSummary === "__all__"
+                                                ? "border-blue-400 bg-blue-600 text-white shadow-sm"
+                                                : "border-blue-200 bg-white text-blue-700 hover:border-blue-300"
+                                        }`}
+                                        title="Show total stock across all colors and all warehouses"
+                                    >
+                                        <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-yellow-400" />
+                                        <span>All Colors</span>
+                                    </button>
+                                )}
+                                {colorSummaries.map((summary: any) => {
+                                    const active = selectedColorSummary !== "__all__" && summary.color === activeColorSummary?.color;
+                                    return (
+                                        <button
+                                            key={summary.color}
+                                            type="button"
+                                            onClick={() => setSelectedColorSummary(summary.color)}
+                                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${getColorBadgeClasses(summary.color, active)}`}
+                                            title={`Show total ${summary.color} stock across all warehouses`}
+                                        >
+                                            <span className={`h-2.5 w-2.5 rounded-full border border-black/10 ${getColorDotClass(summary.color)}`} />
+                                            <span>{summary.color}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {activeColorSummary && (
+                            <div className="lg:min-w-[280px] rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    {activeColorSummary.color} total across warehouses
+                                </div>
+                                <div className="mt-2 flex items-end gap-5">
+                                    <div>
+                                        <div className="text-2xl font-bold text-gray-900">{activeColorSummary.availableStock}</div>
+                                        <div className="text-xs text-gray-500">available now</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-900">{activeColorLocations.length}</div>
+                                        <div className="text-xs text-gray-500">warehouses</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-900">{activeColorSummary.assignedStock}</div>
+                                        <div className="text-xs text-gray-500">assigned</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {activeColorSummary && (
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {activeColorLocations.map(([location, quantity]) => (
+                                <div key={`${activeColorSummary.color}-${location}`} className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                            <MapPin className="h-4 w-4 text-gray-400" />
+                                            <span className="truncate text-sm font-semibold text-gray-900">{location}</span>
+                                        </div>
+                                        <span className="text-lg font-bold text-gray-900">{quantity}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-500">Available for the selected color</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Model Image and Stats */}
             <div className="flex flex-col md:flex-row gap-6">

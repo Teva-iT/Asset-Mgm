@@ -3,10 +3,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Database, ShoppingCart, Search } from "lucide-react";
 
 export default function InventoryNav() {
     const pathname = usePathname();
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+    useEffect(() => {
+        setPendingHref(null);
+    }, [pathname]);
 
     const navItems = [
         {
@@ -49,15 +55,17 @@ export default function InventoryNav() {
                         const isActive = item.exact
                             ? pathname === item.href
                             : pathname.startsWith(item.href) || isChildActive;
+                        const isPending = pendingHref === item.href;
 
                         return (
                             <div key={item.name} className="space-y-1">
                                 <Link
                                     href={item.href}
                                     prefetch={true}
+                                    onClick={() => setPendingHref(item.href)}
                                     className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive
                                         ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5"
-                                        : "text-gray-700 hover:bg-gray-100"
+                                        : isPending ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"
                                         }`}
                                 >
                                     <item.icon className="h-4 w-4" />
@@ -69,12 +77,16 @@ export default function InventoryNav() {
                                     <div className="ml-9 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
                                         {item.items.map(sub => {
                                             const isSubActive = pathname === sub.href;
+                                            const isSubPending = pendingHref === sub.href;
                                             return (
                                                 <Link
                                                     key={sub.name}
                                                     href={sub.href}
                                                     prefetch={true}
-                                                    className={`block px-2 py-1.5 text-sm rounded transition-colors ${isSubActive ? "text-blue-700 font-medium bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                                    onClick={() => setPendingHref(sub.href)}
+                                                    className={`block px-2 py-1.5 text-sm rounded transition-colors ${isSubActive
+                                                        ? "text-blue-700 font-medium bg-blue-50"
+                                                        : isSubPending ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                                         }`}
                                                 >
                                                     {sub.name}

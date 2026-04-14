@@ -13,13 +13,14 @@ interface Asset {
 interface AssetAutocompleteProps {
     onSelect: (asset: Asset | null) => void
     defaultAsset?: Asset
+    value?: Asset | null
 }
 
-export default function AssetAutocomplete({ onSelect, defaultAsset }: AssetAutocompleteProps) {
+export default function AssetAutocomplete({ onSelect, defaultAsset, value }: AssetAutocompleteProps) {
     const [query, setQuery] = useState('')
     const [results, setResults] = useState<Asset[]>([])
     const [isOpen, setIsOpen] = useState(false)
-    const [selected, setSelected] = useState<Asset | null>(defaultAsset || null)
+    const [selected, setSelected] = useState<Asset | null>(value ?? defaultAsset ?? null)
     const wrapperRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -31,6 +32,11 @@ export default function AssetAutocomplete({ onSelect, defaultAsset }: AssetAutoc
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    useEffect(() => {
+        if (value === undefined) return
+        setSelected(value)
+    }, [value])
 
     useEffect(() => {
         const fetchAssets = async () => {
@@ -45,7 +51,7 @@ export default function AssetAutocomplete({ onSelect, defaultAsset }: AssetAutoc
                 // I need to check /api/assets first. I'll assume I can modify it or it returns all and I filter client-side for now,
                 // but for performance server-side filter is better. 
                 // Let's assume I'll add 'q' and 'status' params to /api/assets later.
-                const res = await fetch(`/api/assets?q=${encodeURIComponent(query)}&status=Available`)
+                const res = await fetch(`/api/assets?q=${encodeURIComponent(query)}&status=Available&lite=1`)
                 if (res.ok) {
                     const data = await res.json()
                     setResults(data)

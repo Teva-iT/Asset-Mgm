@@ -8,6 +8,7 @@ interface Employee {
     LastName: string
     Email: string
     Department: string
+    Source?: string
 }
 
 interface EmployeeAutocompleteProps {
@@ -22,6 +23,9 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
     const [isOpen, setIsOpen] = useState(false)
     const [selected, setSelected] = useState<Employee | null>(null)
     const [isDirty, setIsDirty] = useState(false)
+    const [isProvisioning, setIsProvisioning] = useState(false)
+    const [adLookupStatus, setAdLookupStatus] = useState<'idle' | 'ok' | 'config-missing' | 'connection-error'>('idle')
+    const [adLookupMessage, setAdLookupMessage] = useState('')
     const wrapperRef = useRef<HTMLDivElement>(null)
     const selectedEmployee = isDirty ? selected : (defaultEmployee || null)
 
@@ -39,18 +43,30 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
         const fetchEmployees = async () => {
             if (query.length < 2) {
                 setResults([])
+                setAdLookupStatus('idle')
+                setAdLookupMessage('')
                 return
             }
 
             try {
                 const res = await fetch(`/api/employees?q=${encodeURIComponent(query)}`)
                 if (res.ok) {
+                    const statusHeader = res.headers.get('x-ad-status')
+                    const messageHeader = res.headers.get('x-ad-message')
                     const data = await res.json()
                     setResults(data)
+                    setAdLookupStatus(
+                        statusHeader === 'config-missing' || statusHeader === 'connection-error' || statusHeader === 'ok'
+                            ? statusHeader
+                            : 'idle'
+                    )
+                    setAdLookupMessage(messageHeader ? decodeURIComponent(messageHeader) : '')
                     setIsOpen(true)
                 }
             } catch (error) {
                 console.error('Failed to search employees', error)
+                setAdLookupStatus('connection-error')
+                setAdLookupMessage('Employee search failed before Active Directory could respond.')
             }
         }
 
@@ -58,10 +74,42 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
         return () => clearTimeout(timeoutId)
     }, [query])
 
-    const handleSelect = (employee: Employee) => {
-        setIsDirty(true)
-        setSelected(employee)
-        onSelect(employee)
+    const handleSelect = async (employee: Employee) => {
+        if (employee.EmployeeID.startsWith('ad:')) {
+            setIsProvisioning(true)
+            try {
+                const res = await fetch('/api/employees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        FirstName: employee.FirstName,
+                        LastName: employee.LastName,
+                        Email: employee.Email,
+                        Department: employee.Department === 'Active Directory' ? 'Unknown' : employee.Department,
+                        StartDate: new Date().toISOString(),
+                    }),
+                })
+
+                if (!res.ok) {
+                    throw new Error('Failed to prepare employee record from Active Directory')
+                }
+
+                const persistedEmployee = await res.json()
+                setIsDirty(true)
+                setSelected(persistedEmployee)
+                onSelect(persistedEmployee)
+            } catch (error) {
+                console.error('Failed to provision AD employee', error)
+                return
+            } finally {
+                setIsProvisioning(false)
+            }
+        } else {
+            setIsDirty(true)
+            setSelected(employee)
+            onSelect(employee)
+        }
+
         setIsOpen(false)
         setQuery('')
     }
@@ -71,6 +119,8 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
         setSelected(null)
         onSelect(null)
         setQuery('')
+        setAdLookupStatus('idle')
+        setAdLookupMessage('')
     }
 
     // If an employee is selected, replace the input with the "Chip" view
@@ -145,7 +195,7 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
                     placeholder="Search by name, email, or department..."
                     className="input-field"
                     style={{ width: '100%', backgroundColor: disabled ? '#f3f4f6' : 'white' }}
-                    disabled={disabled}
+                    disabled={disabled || isProvisioning}
                     onFocus={() => !disabled && query.length >= 2 && setIsOpen(true)}
                 />
             </div>
@@ -169,7 +219,7 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
                     {results.map((employee, index) => (
                         <div
                             key={employee.EmployeeID}
-                            onClick={() => handleSelect(employee)}
+                            onClick={() => void handleSelect(employee)}
                             style={{
                                 padding: '0.75rem',
                                 cursor: 'pointer',
@@ -188,6 +238,11 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
                             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                 {employee.Email} <span style={{ color: '#d1d5db' }}>|</span> {employee.Department}
                             </div>
+                            {employee.Source === 'AD' && (
+                                <div style={{ fontSize: '0.75rem', color: '#2563eb' }}>
+                                    Active Directory result
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -206,11 +261,31 @@ export default function EmployeeAutocomplete({ onSelect, defaultEmployee, disabl
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     padding: '0.75rem',
                     textAlign: 'center',
-                    color: '#6b7280',
+                    color: adLookupStatus === 'ok' || adLookupStatus === 'idle' ? '#6b7280' : '#b45309',
                     top: '100%',
                     left: 0
                 }}>
-                    No employee found
+                    <div>
+                        {adLookupStatus === 'config-missing'
+                            ? 'Active Directory is not fully configured'
+                            : adLookupStatus === 'connection-error'
+                                ? 'Active Directory search failed'
+                                : 'No employee found'}
+                    </div>
+                    {(adLookupStatus === 'config-missing' || adLookupStatus === 'connection-error') && adLookupMessage && (
+                        <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', color: '#6b7280' }}>
+                            {adLookupMessage}
+                        </div>
+                    )}
+                </div>
+            )}
+            {isProvisioning && (
+                <div style={{
+                    marginTop: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#2563eb'
+                }}>
+                    Preparing employee from Active Directory...
                 </div>
             )}
         </div>

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import InventoryScanner from '@/components/InventoryScanner'
 import AssetImporter from '@/components/inventory/AssetImporter'
 import Link from 'next/link'
@@ -7,15 +7,24 @@ import LowStockDashboard from '@/components/inventory/LowStockDashboard'
 export const revalidate = 30
 
 async function getInventoryData() {
-    const { data: assetsRaw } = await supabase
-        .from("Asset")
-        .select("AssetID, AssetType, Condition, OperationalState, assignments:Assignment(Status)");
+    // Fast path: use SQL view that already excludes Active assignments.
+    const { data: viewData, error: viewError } = await supabaseAdmin
+        .from('available_assets')
+        .select('AssetID, AssetType, Condition, OperationalState')
 
-    // Optimized: Filter in memory since Supabase JS client doesn't support complex relation absence filtering natively
+    if (!viewError && viewData) {
+        return viewData
+    }
+
+    // Fallback: legacy in-memory filter (slower, but keeps page functional if view not migrated yet).
+    const { data: assetsRaw } = await supabaseAdmin
+        .from("Asset")
+        .select("AssetID, AssetType, Condition, OperationalState, assignments:Assignment(Status)")
+
     const inStockAssets = (assetsRaw || []).filter(a => {
-        const hasActive = (a.assignments || []).some((asgn: any) => asgn.Status === 'Active');
-        return !hasActive;
-    });
+        const hasActive = (a.assignments || []).some((asgn: any) => asgn.Status === 'Active')
+        return !hasActive
+    })
 
     return inStockAssets
 }

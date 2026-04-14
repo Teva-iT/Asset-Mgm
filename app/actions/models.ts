@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
 
 type ModelPhotoInput = {
@@ -55,7 +55,7 @@ async function fetchModelPhotos(modelIds: string[]) {
     const validIds = modelIds.filter(Boolean);
     if (validIds.length === 0) return new Map<string, any[]>();
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from("ModelPhoto")
         .select("*")
         .in("ModelID", validIds)
@@ -81,7 +81,7 @@ async function syncModelPhotos(modelId: string, rawValue: FormDataEntryValue | n
         ? normalizedPhotos
         : (fallbackPrimaryUrl ? [{ URL: fallbackPrimaryUrl, Category: "Reference", SortOrder: 0 }] : []);
 
-    const deleteResult = await supabase.from("ModelPhoto").delete().eq("ModelID", modelId);
+    const deleteResult = await supabaseAdmin.from("ModelPhoto").delete().eq("ModelID", modelId);
     if (deleteResult.error) {
         console.warn("ModelPhoto delete skipped:", deleteResult.error.message);
         return;
@@ -89,7 +89,7 @@ async function syncModelPhotos(modelId: string, rawValue: FormDataEntryValue | n
 
     if (photosToPersist.length === 0) return;
 
-    const insertResult = await supabase.from("ModelPhoto").insert(
+    const insertResult = await supabaseAdmin.from("ModelPhoto").insert(
         photosToPersist.map((photo) => ({
             PhotoID: crypto.randomUUID(),
             ModelID: modelId,
@@ -109,13 +109,18 @@ async function syncModelPhotos(modelId: string, rawValue: FormDataEntryValue | n
 export async function getAssetModels() {
     try {
         console.log("FETCHING MODELS...");
-        const modelsRes = await supabase.from("AssetModel").select("*").order("Name", { ascending: true }).limit(100);
+        const modelsRes = await supabaseAdmin.from("AssetModel").select("*").order("Name", { ascending: true }).limit(100);
         console.log("MODELS RES:", modelsRes.error, modelsRes.data?.length);
 
-        const mfrsRes = await supabase.from("Manufacturer").select("ManufacturerID, Name");
-        const assetsRes = await supabase.from("Asset").select("ModelID, StorageLocationID");
-        const invRes = await supabase.from("InventoryRecord").select("ModelID, StorageLocationID, ActionType, CreatedAt");
-        const locsRes = await supabase.from("StorageLocation").select("LocationID, Name");
+        const mfrsRes = await supabaseAdmin.from("Manufacturer").select("ManufacturerID, Name");
+        const modelIds = (modelsRes.data || []).map((m: any) => m.ModelID);
+        const assetsRes = modelIds.length > 0
+            ? await supabaseAdmin.from("Asset").select("ModelID, StorageLocationID").in("ModelID", modelIds)
+            : { data: [], error: null };
+        const invRes = modelIds.length > 0
+            ? await supabaseAdmin.from("InventoryRecord").select("ModelID, StorageLocationID, ActionType, CreatedAt").in("ModelID", modelIds)
+            : { data: [], error: null };
+        const locsRes = await supabaseAdmin.from("StorageLocation").select("LocationID, Name");
 
         if (modelsRes.error) {
             console.error("Models Error", modelsRes.error);
@@ -185,12 +190,12 @@ export async function getAssetModels() {
 // Duplicate a model
 export async function duplicateModel(modelId: string) {
     try {
-        const { data: existing, error: fetchError } = await supabase
+        const { data: existing, error: fetchError } = await supabaseAdmin
             .from("AssetModel")
             .select("*")
             .eq("ModelID", modelId)
             .single();
-        const { data: existingPhotos } = await supabase
+        const { data: existingPhotos } = await supabaseAdmin
             .from("ModelPhoto")
             .select("*")
             .eq("ModelID", modelId)
@@ -202,7 +207,7 @@ export async function duplicateModel(modelId: string) {
         }
 
         const newId = crypto.randomUUID();
-        const { error: insertError } = await supabase.from("AssetModel").insert({
+        const { error: insertError } = await supabaseAdmin.from("AssetModel").insert({
             ModelID: newId,
             Name: `${existing.Name} (Copy)`,
             ModelNumber: existing.ModelNumber,
@@ -245,7 +250,7 @@ export async function createModelAction(formData: FormData) {
         const initialExistingStock = Math.max(0, parseInt(initialExistingStockStr, 10) || 0);
         const initialExistingStockDate = formData.get("initialExistingStockDate")?.toString() || null;
         const initialExistingStockNotes = formData.get("initialExistingStockNotes")?.toString() || null;
-        const { error } = await supabase.from("AssetModel").insert({
+        const { error } = await supabaseAdmin.from("AssetModel").insert({
             ModelID: newId,
             Name: name,
             Series: series,
@@ -270,7 +275,7 @@ export async function createModelAction(formData: FormData) {
         await syncModelPhotos(newId, formData.get("photos"), primaryImageUrl);
 
         if (initialExistingStock > 0) {
-            const { error: openingStockError } = await supabase
+            const { error: openingStockError } = await supabaseAdmin
                 .from("InventoryRecord")
                 .insert({
                     RecordID: crypto.randomUUID(),
@@ -317,7 +322,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
         const initialExistingStock = Math.max(0, parseInt(initialExistingStockStr, 10) || 0);
         const initialExistingStockDate = formData.get("initialExistingStockDate")?.toString() || null;
         const initialExistingStockNotes = formData.get("initialExistingStockNotes")?.toString() || null;
-        const { data: existingModel, error: existingModelError } = await supabase
+        const { data: existingModel, error: existingModelError } = await supabaseAdmin
             .from("AssetModel")
             .select("TotalStock, AvailableStock, AssignedStock")
             .eq("ModelID", modelId)
@@ -327,7 +332,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
             return { success: false, error: "Model not found" };
         }
 
-        const { error } = await supabase.from("AssetModel").update({
+        const { error } = await supabaseAdmin.from("AssetModel").update({
             Name: name,
             Series: series,
             ManufacturerID: manufacturerId,
@@ -351,7 +356,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
         await syncModelPhotos(modelId, formData.get("photos"), primaryImageUrl);
 
         if (existingModel.TotalStock === 0 && initialExistingStock > 0) {
-            const { error: openingStockError } = await supabase
+            const { error: openingStockError } = await supabaseAdmin
                 .from("InventoryRecord")
                 .insert({
                     RecordID: crypto.randomUUID(),
@@ -381,7 +386,7 @@ export async function updateModelAction(modelId: string, formData: FormData) {
 // Check dependencies before deleting a model
 export async function checkModelDependencies(modelId: string) {
     try {
-        const { count, error } = await supabase
+        const { count, error } = await supabaseAdmin
             .from("Asset")
             .select("*", { count: "exact", head: true })
             .eq("ModelID", modelId);
@@ -400,7 +405,7 @@ export async function deleteModel(modelId: string, force: boolean = false) {
     try {
         if (force) {
             // First delete associated assets (InventoryRecords should cascade via DB schema, but we can explicitly delete Assets to be safe as that might be what's blocking)
-            const { error: assetError } = await supabase
+            const { error: assetError } = await supabaseAdmin
                 .from("Asset")
                 .delete()
                 .eq("ModelID", modelId);
@@ -411,7 +416,7 @@ export async function deleteModel(modelId: string, force: boolean = false) {
             }
         }
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("AssetModel")
             .delete()
             .eq("ModelID", modelId);
@@ -451,7 +456,7 @@ export async function addStockAction(formData: FormData) {
     }
 
     try {
-        const { data: model, error: fetchError } = await supabase
+        const { data: model, error: fetchError } = await supabaseAdmin
             .from("AssetModel")
             .select("TotalStock, AvailableStock, DefaultLocationID")
             .eq("ModelID", modelId)
@@ -465,7 +470,7 @@ export async function addStockAction(formData: FormData) {
         // Use provided location or fall back to model's default
         const effectiveLocationId = storageLocationId || model.DefaultLocationID;
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from("AssetModel")
             .update({
                 TotalStock: newTotalStock,
@@ -477,7 +482,7 @@ export async function addStockAction(formData: FormData) {
 
         if (updateError) throw updateError;
 
-        const { error: recordError } = await supabase
+        const { error: recordError } = await supabaseAdmin
             .from("InventoryRecord")
             .insert({
                 RecordID: crypto.randomUUID(),
@@ -524,7 +529,7 @@ export async function adjustStockAction(formData: FormData) {
     }
 
     try {
-        const { data: model, error: fetchError } = await supabase
+        const { data: model, error: fetchError } = await supabaseAdmin
             .from("AssetModel")
             .select("TotalStock, AvailableStock, AssignedStock, DefaultLocationID")
             .eq("ModelID", modelId)
@@ -540,7 +545,7 @@ export async function adjustStockAction(formData: FormData) {
             // Use provided location or fall back to model's default
             const effectiveLocationId = storageLocationId || model.DefaultLocationID;
 
-            const { error: updateError } = await supabase
+            const { error: updateError } = await supabaseAdmin
                 .from("AssetModel")
                 .update({
                     TotalStock: newStock,
@@ -559,7 +564,7 @@ export async function adjustStockAction(formData: FormData) {
             : (adjustmentScope === "purchase" ? "ADJUST_PURCHASE" : "ADJUST_OPENING_STOCK");
         const effectiveLocationId = storageLocationId || model.DefaultLocationID;
 
-        await supabase.from("InventoryRecord").insert({
+        await supabaseAdmin.from("InventoryRecord").insert({
             RecordID: crypto.randomUUID(),
             ModelID: modelId,
             Quantity: difference,
