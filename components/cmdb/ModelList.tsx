@@ -629,6 +629,67 @@ function MultiSelectFilter({
     );
 }
 
+function DateSelectFilter({
+    label,
+    selectedDate,
+    onChange,
+}: {
+    label: string;
+    selectedDate: string | null;
+    onChange: (date: string | null) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        }
+
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [open]);
+
+    function handleDateSelect(date: string | null) {
+        onChange(date);
+        setOpen(false);
+    }
+
+    const summary = selectedDate ? new Date(`${selectedDate}T00:00:00Z`).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    }) : "All Dates";
+
+    return (
+        <div ref={containerRef} className="relative flex-1 min-w-[180px]">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className={`w-full border rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-between gap-3 ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}
+            >
+                <span className={`truncate text-left ${selectedDate ? "text-gray-900" : "text-gray-500"}`}>
+                    {summary}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+                </div>
+            </button>
+
+            {open && (
+                <div className="absolute z-30 mt-2 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+                    <InventoryOrderCalendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function ModelList({ models, manufacturers, locations = [] }: { models: any[], manufacturers: any[], locations?: any[] }) {
     const router = useRouter();
@@ -646,6 +707,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
     const [filterLocations, setFilterLocations] = useState<string[]>([]);
     const [filterColors, setFilterColors] = useState<string[]>([]);
+    const [filterDate, setFilterDate] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const [assetTypes, setAssetTypes] = useState<{ Name: string }[]>([]);
     const [selectedOverviewColor, setSelectedOverviewColor] = useState<string | null>("__all__");
@@ -812,7 +874,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
             .filter(Boolean)
     ).size;
 
-    const activeFilterCount = filterCategories.length + filterManufacturers.length + filterLocations.length + filterStatuses.length + filterColors.length;
+    const activeFilterCount = filterCategories.length + filterManufacturers.length + filterLocations.length + filterStatuses.length + filterColors.length + (filterDate ? 1 : 0);
     const shouldShowWarehouseOverview = searchQuery.trim().length > 0 || activeFilterCount > 0;
 
     const consolidatedModels = Array.from(
@@ -1309,6 +1371,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         setFilterLocations([]);
         setFilterStatuses([]);
         setFilterColors([]);
+        setFilterDate(null);
     }
 
     function handleModelCreated(payload: { category: string; name: string }) {
@@ -1317,6 +1380,7 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
         setFilterLocations([]);
         setFilterStatuses([]);
         setFilterColors([]);
+        setFilterDate(null);
         setFilterCategories(payload.category ? [payload.category] : []);
         setShowFilters(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1502,10 +1566,6 @@ export default function ModelList({ models, manufacturers, locations = [] }: { m
                 {/* Advanced Filters Panel */}
                 {showFilters && (
                     <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-4 animate-in fade-in slide-in-from-top-2">
-                        <div className="w-full">
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Inventory Intake</div>
-                            <InventoryOrderCalendar />
-                        </div>
                         {/* Status Filter */}
                         <MultiSelectFilter
                             label="Stock Status"

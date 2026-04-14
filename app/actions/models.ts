@@ -165,15 +165,24 @@ export async function getAssetModels() {
                 .map(id => locMap[id])
                 .filter(Boolean);
             const modelPhotos = mergeLegacyImageWithPhotos(m, photoMap.get(m.ModelID) || []);
-            const latestIncomingRecord = inventory
-                .filter((inv: any) => inv.ModelID === m.ModelID && ["ADD", "OPENING_STOCK"].includes(inv.ActionType))
+            const incomingRecords = inventory
+                .filter((inv: any) => inv.ModelID === m.ModelID && ["ADD", "OPENING_STOCK", "ADJUST_OPENING_STOCK", "ADJUST_PURCHASE"].includes(inv.ActionType));
+
+            const latestIncomingRecord = incomingRecords
+                .filter((inv: any) => ["ADD", "OPENING_STOCK"].includes(inv.ActionType))
                 .sort((left: any, right: any) => new Date(right.CreatedAt).getTime() - new Date(left.CreatedAt).getTime())[0] || null;
+
+            const intakeDates = Array.from(new Set(incomingRecords.map((inv: any) => {
+                const baseDate = inv.PurchaseDate ? new Date(inv.PurchaseDate) : new Date(inv.CreatedAt);
+                return baseDate.toISOString().split('T')[0];
+            })));
 
             return {
                 ...m,
                 Manufacturer: manufacturer,
                 ModelPhotos: modelPhotos,
                 LastIncomingActionType: latestIncomingRecord?.ActionType || null,
+                IntakeDates: intakeDates,
                 DefaultLocationName: defaultLocName,
                 locations: modelLocationNames,
                 _count: {

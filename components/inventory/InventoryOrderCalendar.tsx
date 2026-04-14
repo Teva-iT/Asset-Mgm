@@ -49,11 +49,34 @@ function intensityClass(total: number) {
     return 'bg-gray-50 text-gray-400'
 }
 
-export default function InventoryOrderCalendar() {
+type Props = {
+    selectedDate?: string | null;
+    onDateSelect?: (date: string | null) => void;
+};
+
+export default function InventoryOrderCalendar({ selectedDate: externalSelectedDate, onDateSelect }: Props = {}) {
     const [monthValue, setMonthValue] = useState(() => formatMonthValue(new Date()))
     const [days, setDays] = useState<DaySummary[]>([])
     const [loading, setLoading] = useState(false)
-    const [selectedDate, setSelectedDate] = useState<string | null>(null)
+    const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null)
+
+    const selectedDate = externalSelectedDate !== undefined ? externalSelectedDate : internalSelectedDate;
+
+    function handleDateSelect(date: string | null) {
+        if (externalSelectedDate === undefined) {
+            setInternalSelectedDate(date);
+        }
+        if (onDateSelect) {
+            onDateSelect(date);
+        }
+    }
+
+    useEffect(() => {
+        if (externalSelectedDate && /^\d{4}-\d{2}-\d{2}$/.test(externalSelectedDate)) {
+            const [y, m] = externalSelectedDate.split("-");
+            setMonthValue(`${y}-${m}`);
+        }
+    }, [externalSelectedDate]);
 
     useEffect(() => {
         setLoading(true)
@@ -81,7 +104,6 @@ export default function InventoryOrderCalendar() {
     function shiftMonth(delta: number) {
         const next = new Date(Date.UTC(year, monthIndex + delta, 1))
         setMonthValue(formatMonthValue(next))
-        setSelectedDate(null)
     }
 
     return (
@@ -107,7 +129,6 @@ export default function InventoryOrderCalendar() {
                         value={monthValue}
                         onChange={(e) => {
                             setMonthValue(e.target.value)
-                            setSelectedDate(null)
                         }}
                         className="border border-gray-200 rounded-md px-2 py-1 text-xs"
                     >
@@ -162,7 +183,7 @@ export default function InventoryOrderCalendar() {
                         <button
                             key={key}
                             type="button"
-                            onClick={() => setSelectedDate(key)}
+                            onClick={() => handleDateSelect(isSelected ? null : key)}
                             className={`h-10 rounded-md border text-[11px] flex flex-col items-center justify-center gap-1 transition ${highlightClass} ${isSelected ? 'ring-2 ring-emerald-400' : 'hover:border-gray-300'}`}
                         >
                             <div className="font-semibold leading-none">{date.getUTCDate()}</div>
